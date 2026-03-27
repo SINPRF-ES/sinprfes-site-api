@@ -1,42 +1,57 @@
-# Matriz de Paridade App vs Site - Gap Audit
+# Matriz de Paridade App vs Site - Estrutura de Navegação Unificada
 
-## 1. Inventário de Telas e Módulos (App Mobile)
+Esta documentação reflete a estrutura de menus e seções padronizada entre o site (Área do Filiado) e o aplicativo mobile (Drawer Navigator).
 
-| Módulo | Tela (App) | Acesso (Drawer/Menu) | Permissão | API / Endpoints | Status no Site |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Geral** | Início (Home) | Início | Todos | `/api/auth/me`, `/api/noticias` | ✅ OK (Implementada sec-home) |
-| **Perfil** | Meus Dados | Meus Dados | Todos | `/api/filiados/me` (GET/PUT) | ✅ OK |
-| **Filiados** | Listagem / Busca | Filiados | Todos | `/api/filiados` | ✅ OK |
-| **Filiados** | Detalhe | Clicar em Filiado | Todos | `/api/filiados/:id` | ✅ OK |
-| **Filiados** | Editar Filiado | Botão Editar | Gestão | `/api/filiados/:id` (PUT) | ✅ OK |
-| **Filiados** | Novo Filiado | Novo Filiado | Gestão | `/api/filiados` (POST) | ✅ OK (Item de menu dedicado) |
-| **Notícias** | Lista / Detalhe | Notícias | Todos | `/api/noticias` | ✅ OK (Ativado para Membros) |
-| **Notícias** | Gestão | Notícias | Comunicação | `/api/noticias` (POST/PUT) | ✅ OK |
-| **Repasse** | Histórico / Edição | Repasse | Gestão | `/api/repasse` | ✅ OK (Unificação de ativos) |
-| **Relatórios** | Geração / Preview | Relatórios | Gestão | `/api/reports` | ✅ OK (Labels e emojis) |
-| **Notificações**| Envio (Push) | Notificações | Gestão | `/api/push/campaigns` | ✅ OK |
-| **Notificações**| Centro de Notif. | (Novo) | Todos | `/api/push/history/me` | ✅ OK (Histórico implementado) |
-| **Publicações**| Biblioteca | Publicações | Todos | `/api/publicacoes` | ✅ OK |
-| **Jogos 2026** | Inscrição / Info | Jogos 2026 | Todos | `/api/jogos` | ✅ OK |
-| **Assembleias** | Votação / Lista | Assembleias | Todos | `/api/assembleias` | ✅ OK |
-| **Estatuto** | Leitura | Estatuto | Todos | (Página estática) | ✅ OK (Implementado sec-estatuto) |
-| **Segurança** | Biometria/2FA | Segurança | Todos | `/api/auth/2fa` | ✅ OK (Aba dedicada) |
+## 1. Estrutura de Seções e Módulos
 
-## 2. Gaps e Divergências Encontradas
+As seções abaixo seguem a ordem de exibição e o agrupamento visual (com cores de fundo distintas) em ambas as plataformas.
 
-### Gap A: Navegação (Home e Novo Filiado)
-No App, a "Página Inicial" tem cards de ações rápidas. O Site abre direto na aba "Meus Dados".
-Também, "Novo Filiado" é um item de menu separado no App, mas no Site está embutido na aba de Filiados.
+### 🏠 Seção I: Área do Filiado
+*Foco na gestão individual do membro e acesso rápido.*
 
-### Gap B: Notícias para Membros
-✅ **Resolvido.** A aba "Informes" agora está habilitada para todos os membros na Área do Filiado, integrando tanto os informes internos quanto os informes públicos do site.
+| Módulo | Descrição | Visibilidade |
+| :--- | :--- | :--- |
+| **Página Inicial** | Dashboard com cards de ações rápidas | Todos |
+| **Meus Dados** | Consulta e atualização cadastral própria | Todos |
+| **Filiados** | Busca e listagem do quadro de membros | Membros (exceto Comunicador) |
+| **Informes** | Mural de avisos e comunicados internos | Todos |
+| **Publicações** | Biblioteca de documentos, atas e resoluções | Membros (exceto Comunicador) |
+| **Convênios** | Lista de parceiros e benefícios | Todos |
+| **Estatuto** | Consulta às normas do sindicato | Todos |
+| **Segurança** | Configurações de 2FA e Biometria | Todos |
+| **Atualizações** | Log de melhorias do sistema | Todos |
 
-### Gap C: Centro de Notificações
-O usuário solicitou explicitamente: "Notificações (lista, detalhe, leitura, preferências, badge)". Isso não existe de forma unificada para o filiado nem no App nem no Site atualmente (o App apenas recebe Push).
+### 🧩 Seção II: Serviços e Participação
+*Módulos interativos e serviços de apoio ao filiado.*
 
-## 3. Plano de Implementação
+| Módulo | Descrição | Visibilidade |
+| :--- | :--- | :--- |
+| **Ressarcimento** | Solicitação de reembolsos e auxílios | Todos |
+| **Assembleias** | Votações em tempo real e histórico | Membros (exceto Comunicador) |
+| **Enquetes** | Consultas rápidas de opinião | Membros (exceto Comunicador) |
+| **Jogos 2026** | Inscrições e informações do evento | Membros (exceto Comunicador) |
+| **Repasse** | Apoio e alocações de recursos | Todos (Edição restrita à Gestão) |
 
-- **Wave A**: Unificar Navegação (Home Cards e Sidebar).
-- **Wave B**: ✅ Habilitar Notícias para todos os membros no Area do Filiado.
-- **Wave C**: Implementar Backend e Frontend para o Centro de Notificações.
-- **Wave D**: Auditoria fina de Repasse e Relatórios.
+### 🛠️ Seção III: Gestão
+*Ferramentas administrativas de controle e auditoria.*
+
+| Módulo | Descrição | Visibilidade |
+| :--- | :--- | :--- |
+| **Consulta Processual** | Monitoramento automático de tribunais (PJe) | Gestão e Membros |
+| **Estatísticas** | Dashboard de acessos e métricas do site | Gestão (RELATORIOS_VER) |
+| **Relatórios** | Geração de dossiês e listas em PDF | Gestão (RELATORIOS_VER) |
+| **Notificações** | Disparo de campanhas Push e histórico | Gestão (PUSH_GERENCIAR) |
+| **Novo Filiado** | Atalho para criação de novos registros | Gestão (CREATE_FILIADO) |
+| **Site (CMS)** | Gestão de conteúdo público (Notícias/Convênios) | Gestão (EDIT_CONTENT) |
+| **Diagnóstico** | Monitoramento técnico e logs do sistema | Diretoria / Admin |
+
+## 2. Implementação Técnica de Paridade
+
+- **Cores de Seção**:
+  - `Principal`: Fundo neutro/smoky leve.
+  - `Serviços`: Destaque em azul marinho translúcido (App: `rgba(0, 51, 102, 0.08)` / Site: `rgba(0, 51, 102, 0.2)`).
+  - `Gestão`: Fundo escuro sutil (App: `rgba(0, 0, 0, 0.05)` / Site: `rgba(0, 0, 0, 0.15)`).
+
+- **RBAC e Visibilidade**:
+  - O módulo **Repasse** foi movido da seção de Gestão para Serviços, tornando-se visível para todos os filiados, embora as funções de edição permaneçam restritas via permissões de backend.
+  - A visibilidade de itens no App agora é filtrada dinamicamente no `CustomDrawerContent.tsx` com base nas permissões reais do usuário, espelhando a lógica do `navigation-config.js` do site.
