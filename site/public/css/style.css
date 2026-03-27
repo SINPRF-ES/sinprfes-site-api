@@ -381,6 +381,19 @@ body {
 .af-sidebar-title { font-weight: 800; font-size: 1.2rem; letter-spacing: 0.5px; }
 
 .af-sidebar-nav { flex: 1; padding: 15px 0; overflow-y: auto; }
+.af-nav-section { margin-bottom: 10px; }
+.af-nav-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px 6px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.72);
+    font-weight: 700;
+    pointer-events: none;
+}
 .af-nav-item {
     width: 100%;
     padding: var(--ui-space-3) var(--ui-space-4);
