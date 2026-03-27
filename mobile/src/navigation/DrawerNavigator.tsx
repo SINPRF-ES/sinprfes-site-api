@@ -228,7 +228,6 @@ export default function DrawerNavigator() {
         />
       )}
 
-      {!isComunicador && (
       <Drawer.Screen
         name="Repasse"
         component={RepasseScreen}
@@ -237,7 +236,6 @@ export default function DrawerNavigator() {
           drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.REPASSE} label="Repasse" {...props} />,
         }}
       />
-      )}
 
       {ehGestaoUsuario && (
         <>

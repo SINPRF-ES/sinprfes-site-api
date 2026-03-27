@@ -20,7 +20,7 @@
     { id: 'nav-assembleias', target: 'sec-assembleias', label: 'Assembleias e Votações', icon: '🗳️', order: 100, section: 'servicos', visible: ({ isComunicador }) => !isComunicador },
     { id: 'nav-enquetes', target: 'sec-enquetes', label: 'Enquetes', icon: '🗨️', order: 110, section: 'servicos', visible: ({ isComunicador }) => !isComunicador },
     { id: 'nav-jogos', target: 'sec-jogos', label: 'Jogos 2026', icon: '🏆', order: 120, section: 'servicos', visible: ({ isComunicador }) => !isComunicador },
-    { id: 'nav-repasse', target: 'sec-repasse', label: 'Repasse', icon: '💱', order: 130, section: 'gestao', visible: ({ isComunicador }) => !isComunicador },
+    { id: 'nav-repasse', target: 'sec-repasse', label: 'Repasse', icon: '💱', order: 130, section: 'servicos' },
     { id: 'nav-relatorios', target: 'sec-relatorios', label: 'Relatórios', icon: '📊', order: 140, section: 'gestao', visible: ({ hasPerm }) => hasPerm('RELATORIOS_VER') },
     { id: 'nav-estatisticas', target: 'sec-estatisticas', label: 'Estatísticas', icon: '📈', order: 150, section: 'gestao', visible: ({ hasPerm }) => hasPerm('RELATORIOS_VER') },
     { id: 'nav-consulta-processual', target: 'sec-consulta-processual', label: 'Consulta Processual', icon: '⚖️', order: 160, section: 'gestao', visible: ({ isComunicador }) => !isComunicador },
