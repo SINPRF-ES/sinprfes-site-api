@@ -25,20 +25,23 @@ type NavItem = {
   screen: keyof DrawerParamList;
   requireGestao?: boolean;
   requireDiretoria?: boolean;
+  requiredPermission?: string;
   hiddenForComunicador?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Meus Dados', subtitle: 'Atualize seu cadastro', icon: 'account-details-outline', screen: 'MeusDados' },
+  { label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: 'account-group-outline', screen: 'Filiados', hiddenForComunicador: true },
   { label: 'Informes', subtitle: 'Avisos e comunicados', icon: 'newspaper-variant-outline', screen: 'Noticias' },
+  { label: 'Convênios', subtitle: 'Benefícios e parceiros', icon: 'handshake-outline', screen: 'Convenios' },
   { label: 'Ressarcimento', subtitle: 'Solicite seu reembolso', icon: 'cash-refund', screen: 'Ressarcimento' },
   { label: 'Assembleias', subtitle: 'Votações e sessões', icon: 'vote-outline', screen: 'Votacao', hiddenForComunicador: true },
-  { label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: 'account-group-outline', screen: 'Filiados', hiddenForComunicador: true },
   { label: 'Publicações', subtitle: 'Biblioteca e Atos', icon: 'book-open-variant', screen: 'Publicacoes', hiddenForComunicador: true },
   { label: 'Repasse', subtitle: 'Apoio e alocações', icon: 'swap-horizontal', screen: 'Repasse', hiddenForComunicador: true },
   { label: 'Relatórios', subtitle: 'Dossiês e PDFs', icon: 'chart-bar', screen: 'Relatorios', requireGestao: true },
   { label: 'Estatísticas', subtitle: 'Acessos do site', icon: 'chart-line', screen: 'Estatisticas', requireGestao: true },
   { label: 'Consulta Processual', subtitle: 'PJe e Tribunais', icon: 'scale-balance', screen: 'ConsultaProcessual', hiddenForComunicador: true },
+  { label: 'Site (CMS)', subtitle: 'Notícias e Convênios', icon: 'web', screen: 'CMSSite', requireGestao: true, requiredPermission: 'EDIT_CONTENT' },
 ];
 
 export default function HomeScreen({ navigation }: Props) {
@@ -48,7 +51,14 @@ export default function HomeScreen({ navigation }: Props) {
   const ehGestaoUsuario = isGestao(usuario?.perfil_acesso);
   const ehDiretoriaUsuario = isDiretoria(usuario?.perfil_acesso);
   const isComunicador = (usuario?.perfil_acesso || '').toUpperCase() === 'COMUNICADOR';
-  const displayedItems = NAV_ITEMS.filter((i) => (!i.requireGestao || ehGestaoUsuario) && (!i.requireDiretoria || ehDiretoriaUsuario) && !(isComunicador && i.hiddenForComunicador));
+  const permissions = Array.isArray((usuario as any)?.permissions) ? (usuario as any).permissions : [];
+  const hasPerm = (perm?: string) => !perm || permissions.includes('*') || permissions.includes(perm);
+  const displayedItems = NAV_ITEMS.filter(
+    (i) => (!i.requireGestao || ehGestaoUsuario)
+      && (!i.requireDiretoria || ehDiretoriaUsuario)
+      && hasPerm(i.requiredPermission)
+      && !(isComunicador && i.hiddenForComunicador)
+  );
 
   const primeiroNome = String(usuario?.nome || 'Filiado').trim().split(' ')[0];
 

@@ -108,17 +108,7 @@ const CustomDrawerContent = (props) => {
       {ehGestao && (
         <>
           <View style={styles.separator} />
-          <DrawerItem
-            label={(props) => (
-              <DrawerItemLabel
-                emoji={EMOJI.GESTAO}
-                label="Gestão"
-                {...props}
-                color={styles.sectionHeader.color}
-              />
-            )}
-            onPress={() => {}} // Não faz nada, é apenas um título
-          />
+          <Text style={styles.sectionHeader}>{EMOJI.GESTAO} Gestão</Text>
           <DrawerItem
             label={(props) => <DrawerItemLabel emoji={EMOJI.NOTIFICACOES} label="Notificações" {...props} />}
             onPress={() => props.navigation.navigate('NotificacoesPush')}
@@ -207,9 +197,13 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   sectionHeader: {
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: COLORS.prfBlue,
-    marginLeft: -16, // Alinha com o texto dos outros itens
+    marginLeft: 16,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    fontSize: 12,
   },
   closeAppContainer: {
     paddingHorizontal: 15,

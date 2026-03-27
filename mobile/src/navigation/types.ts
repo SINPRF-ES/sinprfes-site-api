@@ -3,9 +3,11 @@
 export type DrawerParamList = {
   'Início': undefined;
   Noticias: undefined;
+  Informes: undefined;
   MeusDados: undefined;
   Filiados: undefined;
   Publicacoes: undefined;
+  Convenios: undefined;
   Ressarcimento: undefined;
   Jogos2026: undefined;
   Votacao: undefined;
@@ -14,6 +16,7 @@ export type DrawerParamList = {
   Atualizacoes: undefined;
   ConsultaProcessual: undefined;
   Enquetes: undefined;
+  CMSSite: undefined;
 
   // Condicionais / ocultas
   Logs: undefined;
