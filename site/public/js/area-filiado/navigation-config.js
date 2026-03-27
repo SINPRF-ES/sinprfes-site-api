@@ -1,27 +1,33 @@
 (function (global) {
   if (global.AreaFiliadoNavigation) return;
 
+  const SECTION_META = {
+    principal: { label: 'Área do Filiado', icon: '🏠' },
+    servicos: { label: 'Serviços e Participação', icon: '🧩' },
+    gestao: { label: 'Gestão', icon: '🛠️' },
+  };
+
   const NAVIGATION_ITEMS = [
     { id: 'nav-home', target: 'sec-home', label: 'Página Inicial', icon: '🏠', order: 10, section: 'principal' },
-    { id: 'nav-informes', target: 'sec-informes', label: 'Informes', icon: '📢', order: 20, section: 'principal' },
-    { id: 'nav-convenios', target: 'sec-convenios', label: 'Convênios', icon: '🤝', order: 25, section: 'principal' },
-    { id: 'nav-meus-dados', target: 'sec-meus-dados', label: 'Meus Dados', icon: '👤', order: 30, section: 'principal' },
-    { id: 'nav-filiados', target: 'sec-filiados', label: 'Filiados', icon: '👥', order: 40, section: 'principal', visible: ({ isComunicador }) => !isComunicador },
+    { id: 'nav-meus-dados', target: 'sec-meus-dados', label: 'Meus Dados', icon: '👤', order: 20, section: 'principal' },
+    { id: 'nav-filiados', target: 'sec-filiados', label: 'Filiados', icon: '👥', order: 30, section: 'principal', visible: ({ isComunicador }) => !isComunicador },
+    { id: 'nav-informes', target: 'sec-informes', label: 'Informes', icon: '📢', order: 40, section: 'principal' },
     { id: 'nav-publicacoes', target: 'sec-publicacoes', label: 'Publicações', icon: '📚', order: 50, section: 'principal', visible: ({ isComunicador }) => !isComunicador },
-    { id: 'nav-ressarcimento', target: 'sec-ressarcimento', label: 'Ressarcimento', icon: '💸', order: 60, section: 'principal' },
-    { id: 'nav-jogos', target: 'sec-jogos', label: 'Jogos 2026', icon: '🏆', order: 70, section: 'principal', visible: ({ isComunicador }) => !isComunicador },
-    { id: 'nav-assembleias', target: 'sec-assembleias', label: 'Assembleias e Votações', icon: '🗳️', order: 80, section: 'principal', visible: ({ isComunicador }) => !isComunicador },
-    { id: 'nav-enquetes', target: 'sec-enquetes', label: 'Enquetes', icon: '🗨️', order: 90, section: 'principal', visible: ({ isComunicador }) => !isComunicador },
-    { id: 'nav-estatuto', target: 'sec-estatuto', label: 'Estatuto', icon: '📜', order: 100, section: 'principal' },
-    { id: 'nav-seguranca', target: 'sec-seguranca', label: 'Segurança', icon: '🔒', order: 110, section: 'principal' },
-    { id: 'nav-notificacoes', target: 'sec-notificacoes', label: 'Notificações', icon: '📢', order: 120, section: 'gestao', visible: ({ hasPerm }) => hasPerm('PUSH_GERENCIAR') },
+    { id: 'nav-convenios', target: 'sec-convenios', label: 'Convênios', icon: '🤝', order: 60, section: 'principal' },
+    { id: 'nav-estatuto', target: 'sec-estatuto', label: 'Estatuto', icon: '📜', order: 70, section: 'principal' },
+    { id: 'nav-seguranca', target: 'sec-seguranca', label: 'Segurança', icon: '🔒', order: 80, section: 'principal' },
+    { id: 'nav-ressarcimento', target: 'sec-ressarcimento', label: 'Ressarcimento', icon: '💸', order: 90, section: 'servicos' },
+    { id: 'nav-assembleias', target: 'sec-assembleias', label: 'Assembleias e Votações', icon: '🗳️', order: 100, section: 'servicos', visible: ({ isComunicador }) => !isComunicador },
+    { id: 'nav-enquetes', target: 'sec-enquetes', label: 'Enquetes', icon: '🗨️', order: 110, section: 'servicos', visible: ({ isComunicador }) => !isComunicador },
+    { id: 'nav-jogos', target: 'sec-jogos', label: 'Jogos 2026', icon: '🏆', order: 120, section: 'servicos', visible: ({ isComunicador }) => !isComunicador },
     { id: 'nav-repasse', target: 'sec-repasse', label: 'Repasse', icon: '💱', order: 130, section: 'gestao', visible: ({ isComunicador }) => !isComunicador },
     { id: 'nav-relatorios', target: 'sec-relatorios', label: 'Relatórios', icon: '📊', order: 140, section: 'gestao', visible: ({ hasPerm }) => hasPerm('RELATORIOS_VER') },
-    { id: 'nav-estatisticas', target: 'sec-estatisticas', label: 'Estatísticas', icon: '📈', order: 145, section: 'gestao', visible: ({ hasPerm }) => hasPerm('RELATORIOS_VER') },
-    { id: 'nav-consulta-processual', target: 'sec-consulta-processual', label: 'Consulta Processual', icon: '⚖️', order: 150, section: 'gestao', visible: ({ isComunicador }) => !isComunicador },
-    { id: 'nav-novo-filiado', target: null, label: 'Novo Filiado', icon: '➕', order: 160, section: 'gestao', controls: 'sec-filiados', visible: ({ isComunicador, hasPerm }) => !isComunicador && hasPerm('CREATE_FILIADO') },
-    { id: 'nav-cms', target: 'sec-cms', label: 'Site (CMS)', icon: '🌐', order: 170, section: 'gestao', visible: ({ hasPerm }) => hasPerm('EDIT_CONTENT') },
-    { id: 'nav-diagnostico', target: 'sec-diagnostico', label: 'Diagnóstico', icon: '🛠️', order: 180, section: 'gestao', visible: ({ hasPerm }) => hasPerm('PUSH_GERENCIAR') },
+    { id: 'nav-estatisticas', target: 'sec-estatisticas', label: 'Estatísticas', icon: '📈', order: 150, section: 'gestao', visible: ({ hasPerm }) => hasPerm('RELATORIOS_VER') },
+    { id: 'nav-consulta-processual', target: 'sec-consulta-processual', label: 'Consulta Processual', icon: '⚖️', order: 160, section: 'gestao', visible: ({ isComunicador }) => !isComunicador },
+    { id: 'nav-notificacoes', target: 'sec-notificacoes', label: 'Notificações', icon: '📢', order: 170, section: 'gestao', visible: ({ hasPerm }) => hasPerm('PUSH_GERENCIAR') },
+    { id: 'nav-novo-filiado', target: null, label: 'Novo Filiado', icon: '➕', order: 180, section: 'gestao', controls: 'sec-filiados', visible: ({ isComunicador, hasPerm }) => !isComunicador && hasPerm('CREATE_FILIADO') },
+    { id: 'nav-cms', target: 'sec-cms', label: 'Site (CMS)', icon: '🌐', order: 190, section: 'gestao', visible: ({ hasPerm }) => hasPerm('EDIT_CONTENT') },
+    { id: 'nav-diagnostico', target: 'sec-diagnostico', label: 'Diagnóstico', icon: '🛠️', order: 200, section: 'gestao', visible: ({ hasPerm }) => hasPerm('PUSH_GERENCIAR') },
   ];
 
   function buildContext(info = {}) {
@@ -40,9 +46,22 @@
 
   function renderSidebarNav(container) {
     if (!container) return;
-    container.innerHTML = NAVIGATION_ITEMS
+
+    const grouped = NAVIGATION_ITEMS
       .sort((a, b) => a.order - b.order)
-      .map((item) => {
+      .reduce((acc, item) => {
+        const section = item.section || 'principal';
+        if (!acc[section]) acc[section] = [];
+        acc[section].push(item);
+        return acc;
+      }, {});
+
+    const sectionOrder = Object.keys(SECTION_META).filter((section) => grouped[section]);
+
+    container.innerHTML = sectionOrder
+      .map((section) => {
+        const meta = SECTION_META[section] || { label: section, icon: '•' };
+        const itemsHtml = grouped[section].map((item) => {
         const isActive = item.id === 'nav-home';
         const isHighlight = item.id === 'nav-novo-filiado';
         const controls = item.controls || item.target || 'sec-home';
@@ -52,6 +71,9 @@
         if (isHighlight) classes.push('pulse-highlight');
 
         return `<button class="${classes.join(' ')}"${targetAttr} id="${item.id}" role="tab" aria-selected="${isActive ? 'true' : 'false'}" aria-controls="${controls}"><span aria-hidden="true">${item.icon}</span> ${item.label}</button>`;
+      }).join('');
+
+        return `<div class="af-nav-section" data-section="${section}"><div class="af-nav-section-title" role="presentation"><span aria-hidden="true">${meta.icon}</span> ${meta.label}</div>${itemsHtml}</div>`;
       })
       .join('');
   }
@@ -62,6 +84,13 @@
       const el = document.getElementById(item.id);
       if (!el) return;
       el.style.display = visible.has(item.id) ? 'flex' : 'none';
+    });
+
+    const sectionEls = document.querySelectorAll('.af-nav-section');
+    sectionEls.forEach((sectionEl) => {
+      const hasVisibleButtons = Array.from(sectionEl.querySelectorAll('.af-nav-item'))
+        .some((btn) => btn.style.display !== 'none');
+      sectionEl.style.display = hasVisibleButtons ? 'block' : 'none';
     });
   }
 
