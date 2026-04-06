@@ -9,9 +9,12 @@ function getPublicRefFromLocation() {
 
 function escapeHtml(value) {
   if (window.Utils?.escapeHTML) return window.Utils.escapeHTML(value || '');
-  const div = document.createElement('div');
-  div.textContent = value || '';
-  return div.innerHTML;
+  return String(value || '')
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function formatNewsDate(value) {
@@ -84,7 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <p><a class="ui-button ui-button-outline" href="/noticias.html">← Voltar para Notícias</a></p>
         <h1 style="color:var(--ui-primary); margin-bottom:8px;">${escapeHtml(noticia.titulo || 'Notícia')}</h1>
         <p style="color:#64748b; margin-top:0; margin-bottom:18px;">${formatNewsDate(noticia.published_at || noticia.data_noticia || noticia.created_at)}</p>
-        ${noticia.capa_url ? `<img src="${noticia.capa_url}" alt="${escapeHtml(noticia.titulo || 'Capa da notícia')}" style="width:100%; border-radius:12px; margin-bottom:18px;">` : ''}
+        ${noticia.capa_url ? `<img src="${escapeHtml(noticia.capa_url)}" alt="${escapeHtml(noticia.titulo || 'Capa da notícia')}" style="width:100%; border-radius:12px; margin-bottom:18px;">` : ''}
         <div id="noticia-conteudo" style="line-height:1.7; color:#1f2937;"></div>
         ${renderNewsMedia(noticia.midias, noticia.capa_url)}
       </article>

@@ -234,7 +234,17 @@
         alert(`Há ordens repetidas (${[...duplicatedOrders].join(', ')}). Ajuste antes de salvar.`);
         return;
       }
+
+      const btnSave = document.getElementById('cms-save-all');
+      const originalHtml = btnSave?.innerHTML;
+
       try {
+        if (btnSave) {
+          btnSave.disabled = true;
+          btnSave.setAttribute('aria-busy', 'true');
+          btnSave.innerHTML = '<span class="ui-spinner" aria-hidden="true"></span> Salvando...';
+        }
+
         for (const block of blocks) {
           const data = this.collectBlockData(block.id);
           const res = await window.Api.apiFetch(`/api/content-blocks/${block.id}`, { method: 'PUT', body: data });
@@ -244,9 +254,15 @@
           }
         }
         alert('Todos os blocos foram atualizados com sucesso!');
-        this.loadBlocks(this.page);
+        await this.loadBlocks(this.page);
       } catch (err) {
         alert(`Erro ao salvar: ${err.message}`);
+      } finally {
+        if (btnSave) {
+          btnSave.disabled = false;
+          btnSave.removeAttribute('aria-busy');
+          btnSave.innerHTML = originalHtml;
+        }
       }
     },
   };
