@@ -4,9 +4,12 @@
 
   function escapeHTML(value) {
     if (global.Utils?.escapeHTML) return global.Utils.escapeHTML(value || '');
-    const div = document.createElement('div');
-    div.textContent = value || '';
-    return div.innerHTML;
+    return String(value || '')
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 
   function getMarkdownRenderer() {
@@ -63,8 +66,12 @@
 
 
   function renderInformesPlainText(conteudo) {
+    const markdown = getMarkdownRenderer();
+    if (!markdown) return String(conteudo || '').replace(/\s+/g, ' ').trim();
+
+    const rendered = markdown.render(String(conteudo || ''));
     const tmp = document.createElement('div');
-    tmp.innerHTML = renderInformesMarkdown(conteudo);
+    tmp.innerHTML = sanitizeHtml(rendered);
     return (tmp.textContent || '').replace(/\s+/g, ' ').trim();
   }
 

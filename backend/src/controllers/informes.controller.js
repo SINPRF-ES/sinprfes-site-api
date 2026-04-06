@@ -110,7 +110,7 @@ exports.listar = async (req, res) => {
   const method = "GET";
   const endpoint = "/api/informes";
   const requestId = req.requestId || uuidv4();
-  const userId = req.user?.id;
+  const atorId = req.user?.id;
   const profile = req.user?.perfil_acesso;
   const queryParams = req.query;
 
@@ -121,7 +121,7 @@ exports.listar = async (req, res) => {
     const { status, pagina, status_editorial } = req.query;
     const statusEditorialNorm = status_editorial ? String(status_editorial).toUpperCase() : null;
     const isGestao = verificarGestao(req);
-    const isAutenticado = Boolean(req.user?.id);
+    const isAutenticado = Boolean(atorId);
 
     if (statusEditorialNorm && !['ATUAL', 'ARQUIVADA'].includes(statusEditorialNorm)) {
       return res.status(400).json({
@@ -134,7 +134,7 @@ exports.listar = async (req, res) => {
 
     if (status && typeof status !== 'string') {
       const receivedValue = typeof status === 'object' ? JSON.stringify(status) : String(status);
-      log.warn("INFORMES_GET_INVALID_PARAMS", { requestId, userId, queryParams, receivedStatusType: typeof status, receivedStatusValue: receivedValue.substring(0, 500) });
+      log.warn("INFORMES_GET_INVALID_PARAMS", { requestId, atorId, queryParams, receivedStatusType: typeof status, receivedStatusValue: receivedValue.substring(0, 500) });
       return res.status(400).json({ success: false, message: "Parâmetro 'status' inválido. Deve ser uma string.", code: "INVALID_QUERY_PARAMS", requestId });
     }
 
@@ -217,7 +217,7 @@ exports.listar = async (req, res) => {
       });
     }
 
-    log.info("INFORMES_GET_SUCCESS", { endpoint, method, requestId, userId, durationMs: Date.now() - start, count: informes.length });
+    log.info("INFORMES_GET_SUCCESS", { endpoint, method, requestId, atorId, durationMs: Date.now() - start, count: informes.length });
 
     if (!paginacaoPublica) {
       return res.json(informes.map(serializeInformeRow));
@@ -234,7 +234,7 @@ exports.listar = async (req, res) => {
       },
     });
   } catch (err) {
-    log.error("INFORMES_GET_FAILED", { endpoint, method, requestId, userId, profile, queryParams, durationMs: Date.now() - start, errorMessage: err.message });
+    log.error("INFORMES_GET_FAILED", { endpoint, method, requestId, atorId, profile, queryParams, durationMs: Date.now() - start, errorMessage: err.message });
     return res.status(500).json({ success: false, message: "Erro interno ao processar informes.", requestId });
   }
 };
@@ -247,7 +247,7 @@ exports.detalhar = async (req, res) => {
 
   const method = "GET";
   const endpoint = `/api/informes/${id}`;
-  const userId = req.user?.id;
+  const atorId = req.user?.id;
   const profile = req.user?.perfil_acesso;
 
   try {
@@ -279,7 +279,7 @@ exports.detalhar = async (req, res) => {
 
     informe.midias = annotateMidiasCover(midiaRows, informe.capa_midia_id);
 
-    log.info("INFORMES_DETAIL_SUCCESS", { endpoint, method, requestId, userId, profile, id, durationMs: Date.now() - start });
+    log.info("INFORMES_DETAIL_SUCCESS", { endpoint, method, requestId, atorId, profile, id, durationMs: Date.now() - start });
     return res.json({ ...serializeInformeRow(informe), requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao detalhar informe.");
@@ -292,7 +292,7 @@ exports.detalharPorRef = async (req, res) => {
   const publicRef = String(req.params.publicRef || "").trim();
   const method = "GET";
   const endpoint = `/api/informes/ref/${publicRef}`;
-  const userId = req.user?.id;
+  const atorId = req.user?.id;
   const profile = req.user?.perfil_acesso;
 
   if (!publicRef) {
@@ -328,7 +328,7 @@ exports.detalharPorRef = async (req, res) => {
 
     informe.midias = annotateMidiasCover(midiaRows, informe.capa_midia_id);
 
-    log.info("INFORMES_DETAIL_BY_REF_SUCCESS", { endpoint, method, requestId, userId, profile, publicRef, durationMs: Date.now() - start });
+    log.info("INFORMES_DETAIL_BY_REF_SUCCESS", { endpoint, method, requestId, atorId, profile, publicRef, durationMs: Date.now() - start });
     return res.json({ ...serializeInformeRow(informe), requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao detalhar informe por referência.");
@@ -340,7 +340,8 @@ exports.criar = async (req, res) => {
   const method = "POST";
   const endpoint = "/api/informes";
   const requestId = req.requestId || uuidv4();
-  const userId = req.user?.id;
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
   const profile = req.user?.perfil_acesso;
 
   try {
@@ -394,7 +395,7 @@ exports.criar = async (req, res) => {
       client.release();
     }
 
-    log.info("INFORMES_CREATE_SUCCESS", { endpoint, method, requestId, userId, profile, durationMs: Date.now() - start });
+    log.info("INFORMES_CREATE_SUCCESS", { endpoint, method, requestId, atorId, profile, durationMs: Date.now() - start });
     return res.status(201).json({ ...serializeInformeRow(createdRow), requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao criar informe.");
@@ -409,7 +410,8 @@ exports.atualizar = async (req, res) => {
 
   const method = "PUT";
   const endpoint = `/api/informes/${id}`;
-  const userId = req.user?.id;
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
   const profile = req.user?.perfil_acesso;
 
   try {
@@ -448,7 +450,7 @@ exports.atualizar = async (req, res) => {
       return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
     }
 
-    log.info("INFORMES_UPDATE_SUCCESS", { endpoint, method, requestId, userId, profile, id, durationMs: Date.now() - start });
+    log.info("INFORMES_UPDATE_SUCCESS", { endpoint, method, requestId, atorId, profile, id, durationMs: Date.now() - start });
     return res.json({ ...serializeInformeRow(rows[0]), requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao atualizar informe.");
@@ -463,7 +465,8 @@ exports.publicar = async (req, res) => {
 
   const method = "POST";
   const endpoint = `/api/informes/${id}/publicar`;
-  const userId = req.user?.id;
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
   const profile = req.user?.perfil_acesso;
 
   try {
@@ -543,7 +546,7 @@ exports.publicar = async (req, res) => {
       client.release();
     }
 
-    log.info("INFORMES_PUBLISH_SUCCESS", { endpoint, method, requestId, userId, profile, id, durationMs: Date.now() - start });
+    log.info("INFORMES_PUBLISH_SUCCESS", { endpoint, method, requestId, atorId, profile, id, durationMs: Date.now() - start });
     return res.json({ ...serializeInformeRow(publishRows[0]), requestId });
   } catch (err) {
     return handleDbError(err, res, requestId, "Erro ao publicar informe.");
@@ -554,6 +557,9 @@ exports.arquivar = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const id = parseInformeId(req, res, requestId);
   if (id === null) return;
+
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
 
   const client = await pool.connect();
   try {
@@ -589,9 +595,11 @@ exports.arquivar = async (req, res) => {
     );
 
     await client.query("COMMIT");
+    log.info("INFORMES_ARCHIVE_SUCCESS", { requestId, atorId, id });
     return res.json({ success: true, requestId });
   } catch (err) {
     await client.query("ROLLBACK");
+    log.error("INFORMES_ARCHIVE_FAILED", { requestId, atorId, id, errorMessage: err.message });
     return handleDbError(err, res, requestId, "Erro ao arquivar informe atual.");
   } finally {
     client.release();
@@ -606,7 +614,8 @@ exports.excluir = async (req, res) => {
 
   const method = "DELETE";
   const endpoint = `/api/informes/${id}`;
-  const userId = req.user?.id;
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
   const profile = req.user?.perfil_acesso;
 
   try {
@@ -625,9 +634,10 @@ exports.excluir = async (req, res) => {
       return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
     }
 
-    log.info("INFORMES_DELETE_SUCCESS", { endpoint, method, requestId, userId, profile, id, durationMs: Date.now() - start });
+    log.info("INFORMES_DELETE_SUCCESS", { endpoint, method, requestId, atorId, profile, id, durationMs: Date.now() - start });
     return res.json({ success: true, requestId });
   } catch (err) {
+    log.error("INFORMES_DELETE_FAILED", { endpoint, method, requestId, atorId, profile, id, errorMessage: err.message });
     return handleDbError(err, res, requestId, "Erro ao excluir informe.");
   }
 };
@@ -640,7 +650,8 @@ exports.adicionarMidia = async (req, res) => {
 
   const method = "POST";
   const endpoint = `/api/informes/${id}/midias`;
-  const userId = req.user?.id;
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
   const profile = req.user?.perfil_acesso;
 
   try {
@@ -673,9 +684,10 @@ exports.adicionarMidia = async (req, res) => {
       [id, tipo || (resourceType === "video" ? "VIDEO" : "IMAGEM"), result.secure_url, ordem || 0]
     );
 
-    log.info("INFORMES_ADD_MEDIA_SUCCESS", { endpoint, method, requestId, userId, profile, id, durationMs: Date.now() - start });
+    log.info("INFORMES_ADD_MEDIA_SUCCESS", { endpoint, method, requestId, atorId, profile, id, durationMs: Date.now() - start });
     return res.status(201).json({ ...rows[0], is_capa: false, requestId });
   } catch (err) {
+    log.error("INFORMES_ADD_MEDIA_FAILED", { endpoint, method, requestId, atorId, profile, id, errorMessage: err.message });
     return handleDbError(err, res, requestId, "Erro ao adicionar mídia.");
   }
 };
@@ -690,7 +702,8 @@ exports.removerMidia = async (req, res) => {
 
   const method = "DELETE";
   const endpoint = `/api/informes/midias/${midiaId}`;
-  const userId = req.user?.id;
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
   const profile = req.user?.perfil_acesso;
 
   try {
@@ -715,9 +728,10 @@ exports.removerMidia = async (req, res) => {
       return res.status(404).json({ success: false, message: "Mídia não encontrada.", requestId });
     }
 
-    log.info("INFORMES_REMOVE_MEDIA_SUCCESS", { endpoint, method, requestId, userId, profile, midiaId, durationMs: Date.now() - start });
+    log.info("INFORMES_REMOVE_MEDIA_SUCCESS", { endpoint, method, requestId, atorId, profile, midiaId, durationMs: Date.now() - start });
     return res.json({ success: true, requestId });
   } catch (err) {
+    log.error("INFORMES_REMOVE_MEDIA_FAILED", { endpoint, method, requestId, atorId, profile, midiaId, errorMessage: err.message });
     return handleDbError(err, res, requestId, "Erro ao remover mídia.");
   }
 };
@@ -730,7 +744,8 @@ exports.adicionarMidiaExterna = async (req, res) => {
 
   const method = "POST";
   const endpoint = `/api/informes/${id}/midias_external`;
-  const userId = req.user?.id;
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
   const profile = req.user?.perfil_acesso;
 
   try {
@@ -764,9 +779,10 @@ exports.adicionarMidiaExterna = async (req, res) => {
       [id, tipo, url, ordem || 0]
     );
 
-    log.info("INFORMES_ADD_EXTERNAL_MEDIA_SUCCESS", { endpoint, method, requestId, userId, profile, id, durationMs: Date.now() - start });
+    log.info("INFORMES_ADD_EXTERNAL_MEDIA_SUCCESS", { endpoint, method, requestId, atorId, profile, id, durationMs: Date.now() - start });
     return res.status(201).json({ ...rows[0], is_capa: false, requestId });
   } catch (err) {
+    log.error("INFORMES_ADD_EXTERNAL_MEDIA_FAILED", { endpoint, method, requestId, atorId, profile, id, errorMessage: err.message });
     return handleDbError(err, res, requestId, "Erro ao associar mídia externa.");
   }
 };
@@ -776,7 +792,8 @@ exports.obterAssinaturaUpload = async (req, res) => {
   const method = "POST";
   const endpoint = "/api/informes/upload-signature";
   const requestId = req.requestId || uuidv4();
-  const userId = req.user?.id;
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
   const profile = req.user?.perfil_acesso;
 
   try {
@@ -796,10 +813,10 @@ exports.obterAssinaturaUpload = async (req, res) => {
     }
 
     const signatureData = cloudinary.gerarAssinaturaUpload(params);
-    log.info("INFORMES_GET_SIGNATURE_SUCCESS", { endpoint, method, requestId, userId, profile, durationMs: Date.now() - start });
+    log.info("INFORMES_GET_SIGNATURE_SUCCESS", { endpoint, method, requestId, atorId, profile, durationMs: Date.now() - start });
     return res.json({ ...signatureData, requestId });
   } catch (err) {
-    log.error("INFORMES_GET_SIGNATURE_FAILED", { endpoint, method, requestId, userId, profile, durationMs: Date.now() - start, errorMessage: err.message });
+    log.error("INFORMES_GET_SIGNATURE_FAILED", { endpoint, method, requestId, atorId, profile, durationMs: Date.now() - start, errorMessage: err.message });
     return res.status(500).json({ success: false, message: "Erro ao gerar assinatura.", code: "INTERNAL_SERVER_ERROR", requestId });
   }
 };
@@ -808,6 +825,9 @@ exports.definirCapa = async (req, res) => {
   const requestId = req.requestId || uuidv4();
   const id = parseInformeId(req, res, requestId);
   if (id === null) return;
+
+  const atorId = req.user?.id;
+  if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
 
   try {
     const { rows: estadoRows } = await pool.query(
@@ -843,8 +863,10 @@ exports.definirCapa = async (req, res) => {
       [coverMediaId, midiaRows[0].url, id]
     );
 
+    log.info("INFORMES_SET_COVER_SUCCESS", { requestId, atorId, id, coverMediaId });
     return res.json({ success: true, capa_midia_id: coverMediaId, capa_url: midiaRows[0].url, requestId });
   } catch (err) {
+    log.error("INFORMES_SET_COVER_FAILED", { requestId, atorId, id, errorMessage: err.message });
     return handleDbError(err, res, requestId, "Erro ao definir capa do informe.");
   }
 };

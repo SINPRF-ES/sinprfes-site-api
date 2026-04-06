@@ -321,7 +321,11 @@
 
     document.getElementById("form-noticia-admin").onsubmit = async (e) => {
       e.preventDefault();
-      const fd = new FormData(e.currentTarget);
+      const form = e.currentTarget;
+      const btnSubmit = form.querySelector('button[type="submit"]');
+      const originalHtml = btnSubmit?.innerHTML;
+
+      const fd = new FormData(form);
       const body = {
         titulo: fd.get("titulo"),
         subtitulo: fd.get("subtitulo"),
@@ -330,22 +334,44 @@
         data_noticia: datetimeLocalToSaoPauloIso(fd.get("data_noticia"))
       };
 
-      const endpoint = id ? `/api/noticias/${id}` : "/api/noticias";
-      const method = id ? "PUT" : "POST";
-      const resp = await requestJson(endpoint, { method, body });
-      if (!resp.ok) return alert(resp.data?.message || "Não foi possível salvar.");
+      try {
+        if (btnSubmit) {
+          btnSubmit.disabled = true;
+          btnSubmit.setAttribute('aria-busy', 'true');
+          btnSubmit.innerHTML = '<span class="ui-spinner" aria-hidden="true"></span> Salvando...';
+        }
 
-      const noticiaPersistida = resp.data || {};
-      if (!id) {
-        const verificacao = await requestJson("/api/noticias?status_editorial=ATUAL");
-        const atual = Array.isArray(verificacao.data) ? verificacao.data[0] : verificacao.data.items?.[0];
-        if (!atual || atual.id !== noticiaPersistida.id) {
-          return alert("A notícia foi salva, mas não foi confirmada como notícia atual. A operação foi interrompida para evitar falso positivo.");
+        const endpoint = id ? `/api/noticias/${id}` : "/api/noticias";
+        const method = id ? "PUT" : "POST";
+        const resp = await requestJson(endpoint, { method, body });
+
+        if (!resp.ok) {
+          alert(resp.data?.message || "Não foi possível salvar.");
+          return;
+        }
+
+        const noticiaPersistida = resp.data || {};
+        if (!id) {
+          const verificacao = await requestJson("/api/noticias?status_editorial=ATUAL");
+          const atual = Array.isArray(verificacao.data) ? verificacao.data[0] : verificacao.data.items?.[0];
+          if (!atual || atual.id !== noticiaPersistida.id) {
+            alert("A notícia foi salva, mas não foi confirmada como notícia atual. A operação foi interrompida para evitar falso positivo.");
+            return;
+          }
+        }
+
+        Utils.fecharModal("modal-generic");
+        await carregarNoticias();
+      } catch (err) {
+        console.error('NoticiasAdmin.save.Error', err);
+        alert("Erro inesperado ao salvar notícia.");
+      } finally {
+        if (btnSubmit) {
+          btnSubmit.disabled = false;
+          btnSubmit.removeAttribute('aria-busy');
+          btnSubmit.innerHTML = originalHtml;
         }
       }
-
-      Utils.fecharModal("modal-generic");
-      await carregarNoticias();
     };
 
     if (id) {

@@ -129,7 +129,7 @@ export default function DrawerNavigator() {
         component={ConveniosScreen}
         options={{
           title: 'Convênios',
-          drawerLabel: (props) => <DrawerItemLabel emoji="🤝" label="Convênios" {...props} />,
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.CONVENIOS} label="Convênios" {...props} />,
         }}
       />
 
@@ -290,7 +290,7 @@ export default function DrawerNavigator() {
               component={CmsScreen}
               options={{
                 title: 'Site (CMS)',
-                drawerLabel: (props) => <DrawerItemLabel emoji="🌐" label="Site (CMS)" {...props} />,
+                drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.CMS} label="Site (CMS)" {...props} />,
               }}
             />
           )}
