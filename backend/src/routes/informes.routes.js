@@ -66,7 +66,7 @@ router.post(
   escopoInterno,
   requirePermission("NOTICIAS_GERENCIAR"),
   upload.single("file"),
-  imageOptimizer({ width: 300, height: 300 }),
+  imageOptimizer({ width: 1600, height: 1600, quality: 88, maxSize: 4 * 1024 * 1024 }),
   informesController.adicionarMidia
 );
 
