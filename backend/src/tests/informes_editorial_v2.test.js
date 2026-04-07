@@ -116,4 +116,9 @@ describe('Informes Canonical Contract Tests', () => {
     expect(res.body.id).toBe(VALID_UUID);
     expect(res.body.public_ref).toBe('20260310-informe-01');
   });
+
+  test('rejeita public_ref de notícia no endpoint de informe', async () => {
+    const res = await request(app).get('/api/informes/ref/20260310-noticia-01');
+    expect(res.status).toBe(400);
+  });
 });

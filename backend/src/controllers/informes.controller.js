@@ -298,6 +298,9 @@ exports.detalharPorRef = async (req, res) => {
   if (!publicRef) {
     return res.status(400).json({ success: false, message: "Referência de informe inválida.", requestId });
   }
+  if (!/^\d{8}-informe-\d+$/i.test(publicRef)) {
+    return res.status(400).json({ success: false, message: "Referência de informe inválida para este endpoint.", requestId });
+  }
 
   try {
     const { rows: informeRows } = await pool.query(

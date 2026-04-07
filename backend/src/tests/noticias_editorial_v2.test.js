@@ -142,9 +142,14 @@ describe('Notícias Editorial Functional Tests (Mocked)', () => {
   test('Detalhe público por public_ref retorna 404 quando não existe/publicada', async () => {
     pool.query.mockResolvedValueOnce({ rows: [] });
 
-    const res = await request(app).get('/api/noticias/public/20260312-noticia-inexistente');
+    const res = await request(app).get('/api/noticias/public/20260312-noticia-99');
 
     expect(res.status).toBe(404);
+  });
+
+  test('Detalhe público rejeita public_ref de informe', async () => {
+    const res = await request(app).get('/api/noticias/public/20260312-informe-01');
+    expect(res.status).toBe(400);
   });
 
   test('Listagem pública corrige notícia sem public_ref para evitar descompasso CMS x site', async () => {

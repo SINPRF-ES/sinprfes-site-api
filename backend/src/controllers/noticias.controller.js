@@ -482,6 +482,9 @@ exports.detalharPublicaPorRef = async (req, res) => {
   if (!publicRef) {
     return res.status(400).json({ success: false, message: "Referência pública inválida.", requestId });
   }
+  if (!/^\d{8}-noticia-\d+$/i.test(publicRef)) {
+    return res.status(400).json({ success: false, message: "Referência pública inválida para notícia.", requestId });
+  }
 
   try {
     const { rows: newsRows } = await pool.query(
