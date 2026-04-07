@@ -678,7 +678,11 @@ exports.adicionarMidia = async (req, res) => {
     }
 
     const resourceType = tipo === "VIDEO" ? "video" : "image";
-    const result = await cloudinary.uploadFileBuffer(req.file.buffer, { resource_type: resourceType, folder: "informes" });
+    const result = await cloudinary.uploadFileBuffer(req.file.buffer, {
+      resource_type: resourceType,
+      folder: "informes",
+      standardizeImage: false,
+    });
 
     const { rows } = await pool.query(
       `INSERT INTO informe_midias (informe_id, tipo, url, ordem)
@@ -811,9 +815,6 @@ exports.obterAssinaturaUpload = async (req, res) => {
       tags: tags || "informe",
     };
 
-    if (resource_type !== "video") {
-      params.transformation = cloudinary.STANDARD_IMAGE_TRANSFORMATION_STRING;
-    }
 
     const signatureData = cloudinary.gerarAssinaturaUpload(params);
     log.info("INFORMES_GET_SIGNATURE_SUCCESS", { endpoint, method, requestId, atorId, profile, durationMs: Date.now() - start });
