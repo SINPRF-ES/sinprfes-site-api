@@ -30,7 +30,7 @@
 
   function formatFriendlyRef(ref) {
     if (!ref) return "";
-    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-(?:noticia|informe)-(\d+)$/i);
+    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-noticia-(\d+)$/i);
     if (!match) return "Notícia do site";
     return `Notícia #${match[4]} de ${match[3]}/${match[2]}/${match[1]}`;
   }

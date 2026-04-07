@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS informes (
     capa_midia_id UUID, -- Legacy reference from some versions of informes controller
     is_editable BOOLEAN NOT NULL DEFAULT true,
     destaque BOOLEAN NOT NULL DEFAULT false,
-    data_noticia TIMESTAMPTZ, -- Keeping for compatibility during migration, will use as data_informe
+    data_informe TIMESTAMPTZ,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     published_at TIMESTAMP WITH TIME ZONE,
@@ -38,12 +38,12 @@ CREATE TABLE IF NOT EXISTS informe_midias (
 -- 3. Migrate existing internal news to INFORMES
 INSERT INTO informes (
     id, titulo, subtitulo, conteudo, status, status_editorial, autor_id,
-    capa_url, capa_midia_id, is_editable, destaque, data_noticia,
+    capa_url, capa_midia_id, is_editable, destaque, data_informe,
     created_at, updated_at, published_at, archived_at, sort_date, public_ref
 )
 SELECT
     id, titulo, subtitulo, conteudo, status, status_editorial, autor_id,
-    capa_url, capa_midia_id, is_editable, destaque, data_noticia,
+    capa_url, capa_midia_id, is_editable, destaque, data_noticia AS data_informe,
     created_at, updated_at, published_at, archived_at, sort_date, public_ref
 FROM noticias
 WHERE audiencia = 'INTERNA';

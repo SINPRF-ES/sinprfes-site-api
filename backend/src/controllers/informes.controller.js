@@ -11,7 +11,7 @@ const INFORMES_POR_PAGINA = 3;
 async function gerarPublicRefInforme(client, informe) {
   if (informe.public_ref) return informe.public_ref;
 
-  const date = new Date(informe.published_at || informe.data_informe || informe.data_noticia || informe.created_at || new Date());
+  const date = new Date(informe.published_at || informe.data_informe || informe.created_at || new Date());
   const yyyy = date.getUTCFullYear();
   const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(date.getUTCDate()).padStart(2, "0");
@@ -76,7 +76,7 @@ function toDateOnlyTimestamp(value) {
 
 function serializeInformeRow(row) {
   if (!row) return row;
-  const data_informe = toDateOnly(row.data_informe || row.data_noticia || row.published_at || row.created_at);
+  const data_informe = toDateOnly(row.data_informe || row.published_at || row.created_at);
   const { data_noticia, ...rest } = row;
   return {
     ...rest,
@@ -298,6 +298,9 @@ exports.detalharPorRef = async (req, res) => {
   if (!publicRef) {
     return res.status(400).json({ success: false, message: "Referência de informe inválida.", requestId });
   }
+  if (!/^\d{8}-informe-\d+$/i.test(publicRef)) {
+    return res.status(400).json({ success: false, message: "Referência de informe inválida para este endpoint.", requestId });
+  }
 
   try {
     const { rows: informeRows } = await pool.query(
@@ -380,7 +383,7 @@ exports.criar = async (req, res) => {
       }
 
       const { rows: createdRows } = await client.query(
-        `INSERT INTO informes (titulo, subtitulo, conteudo, status, autor_id, capa_url, destaque, data_noticia, status_editorial, is_editable, sort_date)
+        `INSERT INTO informes (titulo, subtitulo, conteudo, status, autor_id, capa_url, destaque, data_informe, status_editorial, is_editable, sort_date)
          VALUES ($1, $2, $3, 'RASCUNHO', $4, $5, $6, COALESCE($7, NOW()), 'ATUAL', true, COALESCE($7, NOW()))
          RETURNING *`,
         [titulo, subtitulo || null, conteudo, req.user.id, capa_url, Boolean(destaque), dataInformeCanonico || null]
@@ -439,7 +442,7 @@ exports.atualizar = async (req, res) => {
            conteudo = COALESCE($3, conteudo),
            capa_url = COALESCE($4, capa_url),
            destaque = COALESCE($5, destaque),
-           data_noticia = COALESCE($6, data_noticia),
+           data_informe = COALESCE($6, data_informe),
            sort_date = COALESCE($6, sort_date)
        WHERE id = $7
        RETURNING *`,

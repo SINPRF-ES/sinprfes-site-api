@@ -24,7 +24,7 @@
 
   function formatFriendlyRef(ref) {
     if (!ref) return "";
-    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-(?:informe|noticia)-(\d+)$/i);
+    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-informe-(\d+)$/i);
     if (!match) return "Informe interno";
     return `Informe #${match[4]} de ${match[3]}/${match[2]}/${match[1]}`;
   }
