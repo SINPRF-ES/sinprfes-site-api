@@ -9,6 +9,7 @@ import HomeScreen from '../screens/HomeScreen';
 import MeusDadosScreen from '../screens/MeusDadosScreen';
 import FiliadosScreen from '../screens/FiliadosScreen';
 import InformesScreen from '../screens/InformesScreen';
+import AniversariosScreen from '../screens/AniversariosScreen';
 import AssembleiaStack from './AssembleiaStack';
 import LogsScreen from '../screens/LogsScreen';
 import SegurancaScreen from '../screens/SegurancaScreen';
@@ -99,6 +100,16 @@ export default function DrawerNavigator() {
         options={{
           title: 'Informes',
           drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.NOTICIAS} label="Informes" {...props} />,
+        }}
+      />
+
+
+      <Drawer.Screen
+        name="Aniversarios"
+        component={AniversariosScreen}
+        options={{
+          title: 'Aniversários',
+          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.ANIVERSARIOS} label="Aniversários" {...props} />,
         }}
       />
 

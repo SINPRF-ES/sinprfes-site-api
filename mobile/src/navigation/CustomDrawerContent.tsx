@@ -20,6 +20,7 @@ const NAV_STRUCTURE = [
   { key: 'meus-dados', routeName: 'MeusDados', label: 'Meus Dados', emoji: EMOJI.MEUS_DADOS, section: 'principal', order: 20 },
   { key: 'filiados', routeName: 'Filiados', label: 'Filiados', emoji: EMOJI.FILIADOS, section: 'principal', order: 30 },
   { key: 'informes', routeName: 'Noticias', label: 'Informes', emoji: EMOJI.NOTICIAS, section: 'principal', order: 40 },
+  { key: 'aniversarios', routeName: 'Aniversarios', label: 'Aniversários', emoji: EMOJI.ANIVERSARIOS, section: 'principal', order: 45 },
   { key: 'publicacoes', routeName: 'Publicacoes', label: 'Publicações', emoji: EMOJI.PUBLICACOES, section: 'principal', order: 50 },
   { key: 'convenios', routeName: 'Convenios', label: 'Convênios', emoji: EMOJI.CONVENIOS, section: 'principal', order: 60 },
   { key: 'estatuto', routeName: 'Estatuto', label: 'Estatuto', emoji: EMOJI.ESTATUTO, section: 'principal', order: 70 },

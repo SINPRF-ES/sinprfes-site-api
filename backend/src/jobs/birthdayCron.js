@@ -3,6 +3,7 @@ require('dotenv').config();
 const pool = require('../config/db');
 const filiadosService = require('../services/filiados.service');
 const emailService = require('../services/email.service');
+const aniversariosAutoService = require('../services/aniversariosAuto.service');
 
 /**
  * Executa o job de aniversariantes com garantia de idempotência (execução única diária)
@@ -59,6 +60,19 @@ async function runBirthdayScan() {
       aniversariantes
     });
     console.log('✅ [Job] EMAIL OK');
+
+
+    if (count > 0) {
+      try {
+        console.log('[Job] Iniciando criação automática de aniversário...');
+        const resultadoAniversario = await aniversariosAutoService.criarAniversarioAutomatico({ aniversariantes });
+        console.log('✅ [Job] ANIVERSARIO_AUTO OK', resultadoAniversario);
+      } catch (autoErr) {
+        console.error('⚠️ [Job] Falha ao criar aniversário automático (não bloqueia e-mail):', autoErr?.message || autoErr);
+      }
+    } else {
+      console.log('[Job] Sem aniversariantes hoje: criação de aniversário automático ignorada.');
+    }
 
     // 5. Atualiza a data da última execução
     await client.query(

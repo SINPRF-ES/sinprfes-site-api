@@ -24,6 +24,16 @@ import {
   definirCapaInforme,
   InformeMedia,
 } from '../services/informesService';
+import {
+  fetchAniversario,
+  createAniversario,
+  updateAniversario,
+  publicarAniversario,
+  deleteAniversario,
+  addAniversarioMidia,
+  deleteAniversarioMidia,
+  definirCapaAniversario,
+} from '../services/aniversariosService';
 import SafeScreen from '../components/SafeScreen';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -31,7 +41,8 @@ export default function InformeEditorScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const queryClient = useQueryClient();
-  const { newsId } = route.params || {};
+  const { newsId, module = 'informes' } = route.params || {};
+  const isAniversarios = module === 'aniversarios';
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -39,7 +50,7 @@ export default function InformeEditorScreen() {
   const [conteudo, setConteudo] = useState('');
   const [capaUrl, setCapaUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<'RASCUNHO' | 'PUBLICADA'>('RASCUNHO');
-  const [midias, setMidias] = useState<InformeMedia[]>([]);
+  const [midias, setMidias] = useState<any[]>([]);
   const [dataInforme, setDataInforme] = useState('');
   const [isEditable, setIsEditable] = useState(true);
 
@@ -52,7 +63,7 @@ export default function InformeEditorScreen() {
   const loadInforme = async () => {
     setLoading(true);
     try {
-      const data = await fetchInforme(newsId);
+      const data = await (isAniversarios ? fetchAniversario(newsId) : fetchInforme(newsId));
       setTitulo(data.titulo);
       setConteudo(data.conteudo);
       setCapaUrl(data.capa_url);
@@ -61,7 +72,7 @@ export default function InformeEditorScreen() {
       setDataInforme(data.data_informe || "");
       setIsEditable(Boolean(data.is_editable) && data.status_editorial !== "ARQUIVADA");
     } catch (err) {
-      Alert.alert('Erro', 'Não foi possível carregar o informe.');
+      Alert.alert('Erro', `Não foi possível carregar o ${isAniversarios ? 'aniversário' : 'informe'}.`);
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -78,13 +89,14 @@ export default function InformeEditorScreen() {
     try {
       const payload = { titulo, conteudo, capa_url: capaUrl, status, data_informe: dataInforme || null };
       if (newsId) {
-        await updateInforme(newsId, payload);
+        await (isAniversarios ? updateAniversario(newsId, payload) : updateInforme(newsId, payload));
       } else {
-        const created = await createInforme(payload);
+        const created = await (isAniversarios ? createAniversario(payload) : createInforme(payload));
         navigation.setParams({ newsId: created.id });
       }
       queryClient.invalidateQueries({ queryKey: ['informes'] });
-      Alert.alert('Sucesso', 'Informe salvo com sucesso.');
+      queryClient.invalidateQueries({ queryKey: ['aniversarios'] });
+      Alert.alert('Sucesso', `${isAniversarios ? 'Aniversário' : 'Informe'} salvo com sucesso.`);
     } catch (err) {
       Alert.alert('Erro', 'Erro ao salvar informe.');
     } finally {
@@ -105,12 +117,13 @@ export default function InformeEditorScreen() {
         onPress: async () => {
           setSaving(true);
           try {
-            await publicarInforme(newsId);
+            await (isAniversarios ? publicarAniversario(newsId) : publicarInforme(newsId));
             setStatus('PUBLICADA');
             queryClient.invalidateQueries({ queryKey: ['informes'] });
-            Alert.alert('Sucesso', 'Informe publicado!');
+      queryClient.invalidateQueries({ queryKey: ['aniversarios'] });
+            Alert.alert('Sucesso', `${isAniversarios ? 'Aniversário' : 'Informe'} publicado!`);
           } catch (err) {
-            Alert.alert('Erro', 'Erro ao publicar informe.');
+            Alert.alert('Erro', `Erro ao publicar ${isAniversarios ? 'aniversário' : 'informe'}.`);
           } finally {
             setSaving(false);
           }
@@ -133,11 +146,12 @@ export default function InformeEditorScreen() {
         onPress: async () => {
           setSaving(true);
           try {
-            await deleteInforme(newsId);
+            await (isAniversarios ? deleteAniversario(newsId) : deleteInforme(newsId));
             queryClient.invalidateQueries({ queryKey: ['informes'] });
+      queryClient.invalidateQueries({ queryKey: ['aniversarios'] });
             navigation.goBack();
           } catch (err) {
-            Alert.alert('Erro', 'Erro ao excluir informe.');
+            Alert.alert('Erro', `Erro ao excluir ${isAniversarios ? 'aniversário' : 'informe'}.`);
           } finally {
             setSaving(false);
           }
@@ -186,15 +200,18 @@ export default function InformeEditorScreen() {
     setSaving(true);
     try {
       const tipo = asset.type === 'video' ? 'VIDEO' : 'IMAGEM';
-      const midia = await addInformeMidia(newsId, {
+      const payloadMidia = {
         uri: asset.uri,
         type: asset.mimeType || (tipo === 'VIDEO' ? 'video/mp4' : 'image/jpeg'),
         name: asset.fileName || `upload_${Date.now()}`,
-      }, tipo);
+      };
+      const midia: any = isAniversarios
+        ? await addAniversarioMidia(newsId, payloadMidia, tipo)
+        : await addInformeMidia(newsId, payloadMidia, tipo);
 
       setMidias([...midias, midia]);
       if (isCapa) {
-        await definirCapaInforme(newsId, midia.id);
+        await (isAniversarios ? definirCapaAniversario(newsId, midia.id) : definirCapaInforme(newsId, midia.id));
         setCapaUrl(midia.url);
       }
     } catch (err) {
@@ -210,7 +227,7 @@ export default function InformeEditorScreen() {
       return;
     }
     try {
-      await deleteInformeMidia(midiaId);
+      await (isAniversarios ? deleteAniversarioMidia(midiaId) : deleteInformeMidia(midiaId));
       const next = midias.filter((m) => m.id !== midiaId);
       setMidias(next);
       if (capaUrl && !next.some((m) => m.url === capaUrl)) {
@@ -233,7 +250,7 @@ export default function InformeEditorScreen() {
     <SafeScreen style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{newsId ? 'Editar Informe' : 'Novo Informe'}</Text>
+          <Text style={styles.headerTitle}>{newsId ? `Editar ${isAniversarios ? 'Aniversário' : 'Informe'}` : `Novo ${isAniversarios ? 'Aniversário' : 'Informe'}`}</Text>
           {status === 'PUBLICADA' && (
             <View style={styles.publishedBadge}>
               <Text style={styles.publishedText}>PUBLICADA</Text>
@@ -247,7 +264,7 @@ export default function InformeEditorScreen() {
             style={styles.input}
             value={titulo}
             onChangeText={setTitulo}
-            placeholder="Digite o título do informe"
+            placeholder={isAniversarios ? "Digite o título do aniversário" : "Digite o título do informe"}
           />
 
           <Text style={styles.label}>Data do Informe (AAAA-MM-DD)</Text>
@@ -269,11 +286,11 @@ export default function InformeEditorScreen() {
             textAlignVertical="top"
           />
 
-          <Text style={styles.label}>Capa do Informe</Text>
+          <Text style={styles.label}>Capa do {isAniversarios ? "Aniversário" : "Informe"}</Text>
           {capaUrl ? (
             <View style={styles.capaPreviewContainer}>
               <Image source={{ uri: capaUrl }} style={styles.capaPreview} />
-              <TouchableOpacity style={styles.removeCapa} onPress={async () => { setCapaUrl(null); if (newsId) await definirCapaInforme(newsId, null); }}>
+              <TouchableOpacity style={styles.removeCapa} onPress={async () => { setCapaUrl(null); if (newsId) await (isAniversarios ? definirCapaAniversario(newsId, null) : definirCapaInforme(newsId, null)); }}>
                 <FontAwesome name="times-circle" size={24} color="#d32f2f" />
               </TouchableOpacity>
             </View>
@@ -299,7 +316,7 @@ export default function InformeEditorScreen() {
                   <FontAwesome name="trash" size={18} color="#d32f2f" />
                 </TouchableOpacity>
                 {m.tipo === 'IMAGEM' && (
-                  <TouchableOpacity style={styles.coverMark} onPress={async () => { if (newsId) { await definirCapaInforme(newsId, m.id); setCapaUrl(m.url); } }}>
+                  <TouchableOpacity style={styles.coverMark} onPress={async () => { if (newsId) { await (isAniversarios ? definirCapaAniversario(newsId, m.id) : definirCapaInforme(newsId, m.id)); setCapaUrl(m.url); } }}>
                     <FontAwesome name={capaUrl === m.url ? 'check-circle' : 'image'} size={16} color="#003366" />
                   </TouchableOpacity>
                 )}
@@ -324,7 +341,7 @@ export default function InformeEditorScreen() {
 
           {newsId && isEditable && (
             <TouchableOpacity style={[styles.btn, styles.btnDelete]} onPress={handleDelete} disabled={saving}>
-              <Text style={styles.btnText}>Excluir Informe</Text>
+              <Text style={styles.btnText}>Excluir {isAniversarios ? "Aniversário" : "Informe"}</Text>
             </TouchableOpacity>
           )}
         </View>
