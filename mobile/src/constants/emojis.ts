@@ -6,6 +6,7 @@ export const EMOJI = {
   DIAGNOSTICO: "🧾",
   PUBLICACOES: "📚",
   NOTICIAS: "📢",
+  ANIVERSARIOS: "🎂",
   LOGISTICA: "🚚",
   ASSEMBLEIA: "🗳️",
   REPASSE: "💱",

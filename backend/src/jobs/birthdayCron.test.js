@@ -3,10 +3,12 @@ const { runBirthdayScan } = require('./birthdayCron');
 const pool = require('../config/db');
 const filiadosService = require('../services/filiados.service');
 const emailService = require('../services/email.service');
+const aniversariosAutoService = require('../services/aniversariosAuto.service');
 
 jest.mock('../config/db');
 jest.mock('../services/filiados.service');
 jest.mock('../services/email.service');
+jest.mock('../services/aniversariosAuto.service');
 
 describe('birthdayCron - runBirthdayScan', () => {
   let mockClient;
@@ -39,6 +41,7 @@ describe('birthdayCron - runBirthdayScan', () => {
       { nome: 'João Teste', tipo: 'FILIADO', data_nascimento: '1990-01-01' }
     ]);
     emailService.enviarRelatorioAniversariantes.mockResolvedValue();
+    aniversariosAutoService.criarAniversarioAutomatico.mockResolvedValue({ created: true, published: true });
 
     await runBirthdayScan();
 
@@ -52,6 +55,7 @@ describe('birthdayCron - runBirthdayScan', () => {
       dateStr: todayStr,
       aniversariantes: expect.any(Array)
     });
+    expect(aniversariosAutoService.criarAniversarioAutomatico).toHaveBeenCalledWith({ aniversariantes: expect.any(Array) });
     expect(mockClient.query).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE job_runs SET last_run_date = $1'),
       [todayStr, 'BIRTHDAY_SCAN']
@@ -88,6 +92,31 @@ describe('birthdayCron - runBirthdayScan', () => {
     expect(mockClient.release).toHaveBeenCalled();
   });
 
+
+
+  it('should not create aniversario automatico when there are no birthdays', async () => {
+    const todayStr = new Date().toLocaleDateString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+    });
+
+    mockClient.query.mockImplementation((query, params) => {
+      if (query.includes('SELECT last_run_date')) {
+        return Promise.resolve({ rows: [{ last_run_date: '01/01/2000' }] });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+
+    filiadosService.buscarAniversariantesDoDia.mockResolvedValue([]);
+    emailService.enviarRelatorioAniversariantes.mockResolvedValue();
+
+    await runBirthdayScan();
+
+    expect(emailService.enviarRelatorioAniversariantes).toHaveBeenCalledWith({
+      dateStr: todayStr,
+      aniversariantes: []
+    });
+    expect(aniversariosAutoService.criarAniversarioAutomatico).not.toHaveBeenCalled();
+  });
   it('should rollback and throw error on failure', async () => {
     mockClient.query.mockImplementation((query, params) => {
       if (query.includes('SELECT last_run_date')) {

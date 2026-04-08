@@ -163,6 +163,7 @@ const eventoVotacoesRoutes = require("./routes/eventoVotacoes.routes");
 const publicacoesRoutes = require("./routes/publicacoes.routes");
 const noticiasRoutes = require("./routes/noticias.routes");
 const informesRoutes = require("./routes/informes.routes");
+const aniversariosRoutes = require("./routes/aniversarios.routes");
 const repasseRoutes = require("./routes/repasse.routes");
 const adminInstagramIntegrationRoutes = require("./routes/adminInstagramIntegration.routes");
 
@@ -214,6 +215,7 @@ app.use("/api/admin/integrations/instagram", adminInstagramIntegrationRoutes);
 app.use("/api/publicacoes", publicacoesRoutes);
 app.use("/api/noticias", noticiasRoutes);
 app.use("/api/informes", informesRoutes);
+app.use("/api/aniversarios", aniversariosRoutes);
 
 // 💱 NOVO: Repasse
 app.use("/api/repasse", repasseRoutes);

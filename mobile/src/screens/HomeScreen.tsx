@@ -33,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Meus Dados', subtitle: 'Atualize seu cadastro', icon: 'account-details-outline', screen: 'MeusDados' },
   { label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: 'account-group-outline', screen: 'Filiados', hiddenForComunicador: true },
   { label: 'Informes', subtitle: 'Avisos e comunicados', icon: 'newspaper-variant-outline', screen: 'Noticias' },
+  { label: 'Aniversários', subtitle: 'Mural de aniversariantes', icon: 'cake-variant', screen: 'Aniversarios' },
   { label: 'Convênios', subtitle: 'Benefícios e parceiros', icon: 'handshake-outline', screen: 'Convenios' },
   { label: 'Ressarcimento', subtitle: 'Solicite seu reembolso', icon: 'cash-refund', screen: 'Ressarcimento' },
   { label: 'Assembleias', subtitle: 'Votações e sessões', icon: 'vote-outline', screen: 'Votacao', hiddenForComunicador: true },
