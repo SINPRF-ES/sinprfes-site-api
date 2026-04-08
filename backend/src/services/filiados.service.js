@@ -762,18 +762,19 @@ async function buscarAniversariantesDoDia() {
     SELECT * FROM (
       -- Filiados
       SELECT
-        id, nome, situacao, perfil_acesso, 'FILIADO' as tipo,
+        f.id, f.nome, f.situacao, f.perfil_acesso, 'FILIADO' as tipo,
         NULL as nome_filiado_vinculo, NULL as situacao_filiado_vinculo,
-        data_nascimento,
-        email1,
-        email2,
+        f.data_nascimento,
+        f.email1,
+        f.email2,
+        f.permite_comunicacao,
         NULL::INTEGER as dependente_ordem
-      FROM filiados
+      FROM filiados f
       WHERE
-        data_nascimento IS NOT NULL AND
-        EXTRACT(DAY FROM data_nascimento) = EXTRACT(DAY FROM CURRENT_DATE) AND
-        EXTRACT(MONTH FROM data_nascimento) = EXTRACT(MONTH FROM CURRENT_DATE) AND
-        arquivado_em IS NULL
+        f.data_nascimento IS NOT NULL AND
+        EXTRACT(DAY FROM f.data_nascimento) = EXTRACT(DAY FROM CURRENT_DATE) AND
+        EXTRACT(MONTH FROM f.data_nascimento) = EXTRACT(MONTH FROM CURRENT_DATE) AND
+        f.arquivado_em IS NULL
 
       UNION ALL
 
@@ -787,6 +788,7 @@ async function buscarAniversariantesDoDia() {
         f.dep${i}_data_nascimento as data_nascimento,
         f.email1,
         f.email2,
+        f.permite_comunicacao,
         ${i}::INTEGER as dependente_ordem
       FROM filiados f
       WHERE
