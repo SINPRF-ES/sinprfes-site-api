@@ -380,6 +380,21 @@ async function enviarRelatorioAniversariantes({ dateStr, aniversariantes }) {
   console.log(`📧 Relatório de aniversariantes enviado para ${to}.`);
 }
 
+
+async function enviarEmailAniversarioPersonalizado({ to, nome }) {
+  const primeiroNome = (String(nome || '').trim().split(/\s+/)[0]) || 'colega';
+  const subject = 'Feliz aniversário! 🎉';
+  const text = `Olá, ${primeiroNome}.
+
+O SINPRF/ES deseja a você um feliz aniversário, com saúde, paz e muitas conquistas.
+Receba nosso abraço e os votos de um excelente novo ciclo.
+
+Atenciosamente,
+SINPRF/ES`;
+
+  return enviarEmailBase(to, subject, text);
+}
+
 async function enviarEmailRelatorioAssembleia(filiado, assembleia, pdfBuffer, dados = {}) {
   const { MAIL_FROM, REPORT_NOTIFY_EMAIL } = process.env;
   const unionEmail = REPORT_NOTIFY_EMAIL || "sinprfes@sinprfes.org.br";
@@ -527,6 +542,7 @@ module.exports = {
   enviarEmailConfirmacaoInscricaoJogos,
   enviarEmailCancelamentoInscricaoJogos,
   enviarRelatorioAniversariantes,
+  enviarEmailAniversarioPersonalizado,
   enviarEmailRelatorioAssembleia,
   enviarEmailRelatorio,
 };
