@@ -8,7 +8,7 @@ const { ehPerfilGestao } = require("../shared/canon");
 
 const ANIVERSARIOS_POR_PAGINA = 3;
 
-async function gerarPublicRefInforme(client, informe) {
+async function gerarPublicRefAniversario(client, informe) {
   if (informe.public_ref) return informe.public_ref;
 
   const date = new Date(informe.published_at || informe.data_informe || informe.created_at || new Date());
@@ -28,7 +28,7 @@ async function gerarPublicRefInforme(client, informe) {
   );
 
   let nextSeq = 1;
-  if (rows.length > 0) {
+  if (rows.length > 0 && rows[0].public_ref) {
     const lastRef = rows[0].public_ref;
     const parts = lastRef.split("-");
     const lastSeqString = parts[parts.length - 1];
@@ -41,12 +41,12 @@ async function gerarPublicRefInforme(client, informe) {
   return `${prefix}${String(nextSeq).padStart(2, "0")}`;
 }
 
-async function garantirPublicRef(client, informe) {
+async function garantirPublicRefAniversario(client, informe) {
   if (!informe || informe.public_ref) {
     return informe;
   }
 
-  const publicRef = await gerarPublicRefInforme(client, informe);
+  const publicRef = await gerarPublicRefAniversario(client, informe);
   const { rows } = await client.query(
     `UPDATE aniversarios
      SET public_ref = $1
@@ -74,12 +74,11 @@ function toDateOnlyTimestamp(value) {
   return `${dateOnly}T12:00:00.000Z`;
 }
 
-function serializeInformeRow(row) {
+function serializeAniversarioRow(row) {
   if (!row) return row;
   const data_informe = toDateOnly(row.data_informe || row.published_at || row.created_at);
-  const { data_noticia, ...rest } = row;
   return {
-    ...rest,
+    ...row,
     data_informe
   };
 }
@@ -91,10 +90,10 @@ function annotateMidiasCover(midias = [], capaMidiaId) {
   }));
 }
 
-function parseInformeId(req, res, requestId) {
+function parseAniversarioId(req, res, requestId) {
     const id = parseUuid(String(req.params.id || ""));
     if (!id) {
-        res.status(400).json({ success: false, message: "ID de informe inválido.", requestId });
+        res.status(400).json({ success: false, message: "ID de aniversário inválido.", requestId });
         return null;
     }
     return id;
@@ -189,7 +188,7 @@ exports.listar = async (req, res) => {
       const client = await pool.connect();
       try {
         for (const informe of informesSemRef) {
-          const informeAtualizado = await garantirPublicRef(client, informe);
+          const informeAtualizado = await garantirPublicRefAniversario(client, informe);
           aniversarios = aniversarios.map((item) => (item.id === informeAtualizado.id ? informeAtualizado : item));
         }
       } finally {
@@ -220,12 +219,12 @@ exports.listar = async (req, res) => {
     log.info("ANIVERSARIOS_GET_SUCCESS", { endpoint, method, requestId, atorId, durationMs: Date.now() - start, count: aniversarios.length });
 
     if (!paginacaoPublica) {
-      return res.json(aniversarios.map(serializeInformeRow));
+      return res.json(aniversarios.map(serializeAniversarioRow));
     }
 
     const totalPaginas = Math.max(1, Math.ceil(total / ANIVERSARIOS_POR_PAGINA));
     return res.json({
-      items: aniversarios.map(serializeInformeRow),
+      items: aniversarios.map(serializeAniversarioRow),
       pagination: {
         page: paginaAtual,
         perPage: ANIVERSARIOS_POR_PAGINA,
@@ -242,7 +241,7 @@ exports.listar = async (req, res) => {
 exports.detalhar = async (req, res) => {
   const start = Date.now();
   const requestId = req.requestId || uuidv4();
-  const id = parseInformeId(req, res, requestId);
+  const id = parseAniversarioId(req, res, requestId);
   if (id === null) return;
 
   const method = "GET";
@@ -260,7 +259,7 @@ exports.detalhar = async (req, res) => {
     );
 
     if (informeRows.length === 0) {
-      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
+      return res.status(404).json({ success: false, message: "Aniversário não encontrado.", requestId });
     }
 
     const informe = informeRows[0];
@@ -269,7 +268,7 @@ exports.detalhar = async (req, res) => {
     const podeVisualizar = isGestao || informe.status === "PUBLICADA";
 
     if (!podeVisualizar) {
-      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
+      return res.status(404).json({ success: false, message: "Aniversário não encontrado.", requestId });
     }
 
     const { rows: midiaRows } = await pool.query(
@@ -280,9 +279,9 @@ exports.detalhar = async (req, res) => {
     informe.midias = annotateMidiasCover(midiaRows, informe.capa_midia_id);
 
     log.info("ANIVERSARIOS_DETAIL_SUCCESS", { endpoint, method, requestId, atorId, profile, id, durationMs: Date.now() - start });
-    return res.json({ ...serializeInformeRow(informe), requestId });
+    return res.json({ ...serializeAniversarioRow(informe), requestId });
   } catch (err) {
-    return handleDbError(err, res, requestId, "Erro ao detalhar informe.");
+    return handleDbError(err, res, requestId, "Erro ao detalhar aniversário.");
   }
 };
 
@@ -296,10 +295,10 @@ exports.detalharPorRef = async (req, res) => {
   const profile = req.user?.perfil_acesso;
 
   if (!publicRef) {
-    return res.status(400).json({ success: false, message: "Referência de informe inválida.", requestId });
+    return res.status(400).json({ success: false, message: "Referência de aniversário inválida.", requestId });
   }
   if (!/^\d{8}-aniversario-\d+$/i.test(publicRef)) {
-    return res.status(400).json({ success: false, message: "Referência de informe inválida para este endpoint.", requestId });
+    return res.status(400).json({ success: false, message: "Referência de aniversário inválida para este endpoint.", requestId });
   }
 
   try {
@@ -313,7 +312,7 @@ exports.detalharPorRef = async (req, res) => {
     );
 
     if (informeRows.length === 0) {
-      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
+      return res.status(404).json({ success: false, message: "Aniversário não encontrado.", requestId });
     }
 
     const informe = informeRows[0];
@@ -321,7 +320,7 @@ exports.detalharPorRef = async (req, res) => {
     const podeVisualizar = isGestao || informe.status === "PUBLICADA";
 
     if (!podeVisualizar) {
-      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
+      return res.status(404).json({ success: false, message: "Aniversário não encontrado.", requestId });
     }
 
     const { rows: midiaRows } = await pool.query(
@@ -332,9 +331,9 @@ exports.detalharPorRef = async (req, res) => {
     informe.midias = annotateMidiasCover(midiaRows, informe.capa_midia_id);
 
     log.info("ANIVERSARIOS_DETAIL_BY_REF_SUCCESS", { endpoint, method, requestId, atorId, profile, publicRef, durationMs: Date.now() - start });
-    return res.json({ ...serializeInformeRow(informe), requestId });
+    return res.json({ ...serializeAniversarioRow(informe), requestId });
   } catch (err) {
-    return handleDbError(err, res, requestId, "Erro ao detalhar informe por referência.");
+    return handleDbError(err, res, requestId, "Erro ao detalhar aniversário por referência.");
   }
 };
 
@@ -399,16 +398,16 @@ exports.criar = async (req, res) => {
     }
 
     log.info("ANIVERSARIOS_CREATE_SUCCESS", { endpoint, method, requestId, atorId, profile, durationMs: Date.now() - start });
-    return res.status(201).json({ ...serializeInformeRow(createdRow), requestId });
+    return res.status(201).json({ ...serializeAniversarioRow(createdRow), requestId });
   } catch (err) {
-    return handleDbError(err, res, requestId, "Erro ao criar informe.");
+    return handleDbError(err, res, requestId, "Erro ao criar aniversário.");
   }
 };
 
 exports.atualizar = async (req, res) => {
   const start = Date.now();
   const requestId = req.requestId || uuidv4();
-  const id = parseInformeId(req, res, requestId);
+  const id = parseAniversarioId(req, res, requestId);
   if (id === null) return;
 
   const method = "PUT";
@@ -427,12 +426,12 @@ exports.atualizar = async (req, res) => {
     );
 
     if (estadoRows.length === 0) {
-      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
+      return res.status(404).json({ success: false, message: "Aniversário não encontrado.", requestId });
     }
 
     const informeAlvo = estadoRows[0];
     if (informeAlvo.status_editorial === "ARQUIVADA" || informeAlvo.is_editable === false) {
-      return res.status(409).json({ success: false, message: "Este informe está arquivado e não pode mais ser editado.", code: "ARCHIVED_NEWS_IMMUTABLE", requestId });
+      return res.status(409).json({ success: false, message: "Este aniversário está arquivado e não pode mais ser editado.", code: "ARCHIVED_NEWS_IMMUTABLE", requestId });
     }
 
     const { rows } = await pool.query(
@@ -450,20 +449,20 @@ exports.atualizar = async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
+      return res.status(404).json({ success: false, message: "Aniversário não encontrado.", requestId });
     }
 
     log.info("ANIVERSARIOS_UPDATE_SUCCESS", { endpoint, method, requestId, atorId, profile, id, durationMs: Date.now() - start });
-    return res.json({ ...serializeInformeRow(rows[0]), requestId });
+    return res.json({ ...serializeAniversarioRow(rows[0]), requestId });
   } catch (err) {
-    return handleDbError(err, res, requestId, "Erro ao atualizar informe.");
+    return handleDbError(err, res, requestId, "Erro ao atualizar aniversário.");
   }
 };
 
 exports.publicar = async (req, res) => {
   const start = Date.now();
   const requestId = req.requestId || uuidv4();
-  const id = parseInformeId(req, res, requestId);
+  const id = parseAniversarioId(req, res, requestId);
   if (id === null) return;
 
   const method = "POST";
@@ -472,93 +471,73 @@ exports.publicar = async (req, res) => {
   if (!atorId) return res.status(401).json({ success: false, message: "Não autenticado", requestId });
   const profile = req.user?.perfil_acesso;
 
+  const client = await pool.connect();
   try {
-    const { rows: estadoRows } = await pool.query(
-      "SELECT status_editorial, is_editable FROM aniversarios WHERE id = $1",
+    await client.query("BEGIN");
+
+    const { rows: targetRows } = await client.query(
+      "SELECT * FROM aniversarios WHERE id = $1 FOR UPDATE",
       [id]
     );
 
-    if (estadoRows.length === 0) {
-      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
-    }
-
-    if (estadoRows[0].status_editorial === "ARQUIVADA" || estadoRows[0].is_editable === false) {
-      return res.status(409).json({ success: false, message: "Informe arquivado não pode ser publicado novamente.", requestId });
-    }
-
-    const client = await pool.connect();
-    let publishRows;
-
-    try {
-      await client.query("BEGIN");
-
-      const { rows: atuais } = await client.query(
-        `SELECT id FROM aniversarios
-         WHERE status_editorial = 'ATUAL'
-           AND id <> $1
-         FOR UPDATE`,
-        [id]
-      );
-
-      if (atuais.length > 0) {
-        const idsToArchive = atuais.map(r => r.id);
-        await client.query(
-          `UPDATE aniversarios
-           SET status_editorial = 'ARQUIVADA',
-               is_editable = false,
-               archived_at = NOW(),
-               status = 'PUBLICADA',
-               published_at = COALESCE(published_at, NOW()),
-               sort_date = COALESCE(sort_date, published_at, created_at)
-           WHERE id = ANY($1)`,
-          [idsToArchive]
-        );
-      }
-
-      const { rows: baseRows } = await client.query(
-        `UPDATE aniversarios
-         SET status = 'PUBLICADA',
-             status_editorial = 'ATUAL',
-             is_editable = true,
-             published_at = COALESCE(published_at, NOW()),
-             sort_date = COALESCE(sort_date, published_at, created_at)
-         WHERE id = $1
-         RETURNING *`,
-        [id]
-      );
-
-      if (baseRows.length === 0) {
-        await client.query("ROLLBACK");
-        return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
-      }
-
-      const informeBase = baseRows[0];
-      const publicRef = await gerarPublicRefInforme(client, informeBase);
-
-      const { rows: publishedRows } = await client.query(
-        `UPDATE aniversarios SET public_ref = $1 WHERE id = $2 RETURNING *`,
-        [publicRef, informeBase.id]
-      );
-
-      publishRows = publishedRows;
-      await client.query("COMMIT");
-    } catch (error) {
+    if (targetRows.length === 0) {
       await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
+      return res.status(404).json({ success: false, message: "Aniversário não encontrado.", requestId });
     }
 
+    const item = targetRows[0];
+    if (item.status_editorial === "ARQUIVADA" || item.is_editable === false) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ success: false, message: "Aniversário arquivado não pode ser publicado novamente.", requestId });
+    }
+
+    // 1. Arquiva outros ATUAIS
+    await client.query(
+      `UPDATE aniversarios
+       SET status_editorial = 'ARQUIVADA',
+           is_editable = false,
+           archived_at = NOW(),
+           status = 'PUBLICADA',
+           published_at = COALESCE(published_at, NOW()),
+           sort_date = COALESCE(sort_date, published_at, created_at)
+       WHERE status_editorial = 'ATUAL'
+         AND id <> $1`,
+      [id]
+    );
+
+    // 2. Prepara dados do item atual
+    const publishedAt = item.published_at || new Date();
+    const publicRef = item.public_ref || await gerarPublicRefAniversario(client, { ...item, published_at: publishedAt });
+
+    // 3. Update final único
+    const { rows: publishedRows } = await client.query(
+      `UPDATE aniversarios
+       SET status = 'PUBLICADA',
+           status_editorial = 'ATUAL',
+           is_editable = true,
+           published_at = $1,
+           sort_date = $1,
+           public_ref = $2
+       WHERE id = $3
+       RETURNING *`,
+      [publishedAt, publicRef, id]
+    );
+
+    await client.query("COMMIT");
     log.info("ANIVERSARIOS_PUBLISH_SUCCESS", { endpoint, method, requestId, atorId, profile, id, durationMs: Date.now() - start });
-    return res.json({ ...serializeInformeRow(publishRows[0]), requestId });
-  } catch (err) {
-    return handleDbError(err, res, requestId, "Erro ao publicar informe.");
+    return res.json({ ...serializeAniversarioRow(publishedRows[0]), requestId });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    log.error("ANIVERSARIOS_PUBLISH_FAILED", { endpoint, method, requestId, atorId, id, errorMessage: error.message });
+    return handleDbError(error, res, requestId, "Erro ao publicar aniversário.");
+  } finally {
+    client.release();
   }
 };
 
 exports.arquivar = async (req, res) => {
   const requestId = req.requestId || uuidv4();
-  const id = parseInformeId(req, res, requestId);
+  const id = parseAniversarioId(req, res, requestId);
   if (id === null) return;
 
   const atorId = req.user?.id;
@@ -575,14 +554,14 @@ exports.arquivar = async (req, res) => {
 
     if (rows.length === 0) {
       await client.query("ROLLBACK");
-      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
+      return res.status(404).json({ success: false, message: "Aniversário não encontrado.", requestId });
     }
 
     const informe = rows[0];
 
     if (informe.status_editorial === "ARQUIVADA") {
       await client.query("ROLLBACK");
-      return res.status(409).json({ success: false, message: "O informe já está arquivado.", requestId });
+      return res.status(409).json({ success: false, message: "O aniversário já está arquivado.", requestId });
     }
 
     await client.query(
@@ -603,7 +582,7 @@ exports.arquivar = async (req, res) => {
   } catch (err) {
     await client.query("ROLLBACK");
     log.error("ANIVERSARIOS_ARCHIVE_FAILED", { requestId, atorId, id, errorMessage: err.message });
-    return handleDbError(err, res, requestId, "Erro ao arquivar informe atual.");
+    return handleDbError(err, res, requestId, "Erro ao arquivar aniversário atual.");
   } finally {
     client.release();
   }
@@ -612,7 +591,7 @@ exports.arquivar = async (req, res) => {
 exports.excluir = async (req, res) => {
   const start = Date.now();
   const requestId = req.requestId || uuidv4();
-  const id = parseInformeId(req, res, requestId);
+  const id = parseAniversarioId(req, res, requestId);
   if (id === null) return;
 
   const method = "DELETE";
@@ -624,31 +603,31 @@ exports.excluir = async (req, res) => {
   try {
     const { rows: lockRows } = await pool.query("SELECT status_editorial FROM aniversarios WHERE id = $1", [id]);
     if (lockRows.length === 0) {
-      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
+      return res.status(404).json({ success: false, message: "Aniversário não encontrado.", requestId });
     }
 
     if (lockRows[0].status_editorial === "ARQUIVADA") {
-      return res.status(409).json({ success: false, message: "Informe arquivado não pode ser excluído.", code: "ARCHIVED_NEWS_IMMUTABLE", requestId });
+      return res.status(409).json({ success: false, message: "Aniversário arquivado não pode ser excluído.", code: "ARCHIVED_NEWS_IMMUTABLE", requestId });
     }
 
     const { rowCount } = await pool.query("DELETE FROM aniversarios WHERE id = $1", [id]);
 
     if (rowCount === 0) {
-      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
+      return res.status(404).json({ success: false, message: "Aniversário não encontrado.", requestId });
     }
 
     log.info("ANIVERSARIOS_DELETE_SUCCESS", { endpoint, method, requestId, atorId, profile, id, durationMs: Date.now() - start });
     return res.json({ success: true, requestId });
   } catch (err) {
     log.error("ANIVERSARIOS_DELETE_FAILED", { endpoint, method, requestId, atorId, profile, id, errorMessage: err.message });
-    return handleDbError(err, res, requestId, "Erro ao excluir informe.");
+    return handleDbError(err, res, requestId, "Erro ao excluir aniversário.");
   }
 };
 
 exports.adicionarMidia = async (req, res) => {
   const start = Date.now();
   const requestId = req.requestId || uuidv4();
-  const id = parseInformeId(req, res, requestId);
+  const id = parseAniversarioId(req, res, requestId);
   if (id === null) return;
 
   const method = "POST";
@@ -664,11 +643,11 @@ exports.adicionarMidia = async (req, res) => {
     );
 
     if (estadoRows.length === 0) {
-      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
+      return res.status(404).json({ success: false, message: "Aniversário não encontrado.", requestId });
     }
 
     if (estadoRows[0].status_editorial === "ARQUIVADA" || estadoRows[0].is_editable === false) {
-      return res.status(409).json({ success: false, message: "Informe arquivado não permite adição de mídias.", requestId });
+      return res.status(409).json({ success: false, message: "Aniversário arquivado não permite adição de mídias.", requestId });
     }
 
     const { tipo, ordem } = req.body;
@@ -721,7 +700,7 @@ exports.removerMidia = async (req, res) => {
 
     if (midiaRows.length > 0) {
       if (midiaRows[0].status_editorial === "ARQUIVADA" || midiaRows[0].is_editable === false) {
-        return res.status(409).json({ success: false, message: "Mídia de informe arquivado não pode ser removida.", requestId });
+        return res.status(409).json({ success: false, message: "Mídia de aniversário arquivado não pode ser removida.", requestId });
       }
     }
 
@@ -746,7 +725,7 @@ exports.removerMidia = async (req, res) => {
 exports.adicionarMidiaExterna = async (req, res) => {
   const start = Date.now();
   const requestId = req.requestId || uuidv4();
-  const id = parseInformeId(req, res, requestId);
+  const id = parseAniversarioId(req, res, requestId);
   if (id === null) return;
 
   const method = "POST";
@@ -766,11 +745,11 @@ exports.adicionarMidiaExterna = async (req, res) => {
     );
 
     if (estadoRows.length === 0) {
-      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
+      return res.status(404).json({ success: false, message: "Aniversário não encontrado.", requestId });
     }
 
     if (estadoRows[0].status_editorial === "ARQUIVADA" || estadoRows[0].is_editable === false) {
-      return res.status(409).json({ success: false, message: "Informe arquivado não permite adição de mídias externas.", requestId });
+      return res.status(409).json({ success: false, message: "Aniversário arquivado não permite adição de mídias externas.", requestId });
     }
 
     const { tipo, url, ordem } = req.body;
@@ -812,7 +791,7 @@ exports.obterAssinaturaUpload = async (req, res) => {
 
     const params = {
       folder: folder || "aniversarios",
-      tags: tags || "informe",
+      tags: tags || "aniversario",
     };
 
 
@@ -827,7 +806,7 @@ exports.obterAssinaturaUpload = async (req, res) => {
 
 exports.definirCapa = async (req, res) => {
   const requestId = req.requestId || uuidv4();
-  const id = parseInformeId(req, res, requestId);
+  const id = parseAniversarioId(req, res, requestId);
   if (id === null) return;
 
   const atorId = req.user?.id;
@@ -839,10 +818,10 @@ exports.definirCapa = async (req, res) => {
       [id]
     );
     if (estadoRows.length === 0) {
-      return res.status(404).json({ success: false, message: "Informe não encontrado.", requestId });
+      return res.status(404).json({ success: false, message: "Aniversário não encontrado.", requestId });
     }
     if (estadoRows[0].status_editorial === "ARQUIVADA" || estadoRows[0].is_editable === false) {
-      return res.status(409).json({ success: false, message: "Informe arquivado não permite alteração de capa.", requestId });
+      return res.status(409).json({ success: false, message: "Aniversário arquivado não permite alteração de capa.", requestId });
     }
 
     const coverMediaId = parseUuid(String(req.body?.coverMediaId || ""));
@@ -856,10 +835,10 @@ exports.definirCapa = async (req, res) => {
       [coverMediaId, id]
     );
     if (midiaRows.length === 0) {
-      return res.status(404).json({ success: false, message: "Mídia de capa não encontrada para este informe.", requestId });
+      return res.status(404).json({ success: false, message: "Mídia de capa não encontrada para este aniversário.", requestId });
     }
     if (midiaRows[0].tipo !== "IMAGEM") {
-      return res.status(400).json({ success: false, message: "A capa deve ser uma imagem anexada ao informe.", requestId });
+      return res.status(400).json({ success: false, message: "A capa deve ser uma imagem anexada ao aniversário.", requestId });
     }
 
     await pool.query(
@@ -871,6 +850,6 @@ exports.definirCapa = async (req, res) => {
     return res.json({ success: true, capa_midia_id: coverMediaId, capa_url: midiaRows[0].url, requestId });
   } catch (err) {
     log.error("ANIVERSARIOS_SET_COVER_FAILED", { requestId, atorId, id, errorMessage: err.message });
-    return handleDbError(err, res, requestId, "Erro ao definir capa do informe.");
+    return handleDbError(err, res, requestId, "Erro ao definir capa do aniversário.");
   }
 };
