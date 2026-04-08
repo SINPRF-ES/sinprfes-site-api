@@ -103,7 +103,7 @@
     const friendlyRef = formatFriendlyRef(n.public_ref);
     const friendlyUrl = getFriendlyAniversarioUrl(n.public_ref);
     return `
-      <div class="informe-admin-card" style="border:1px solid #ddd; border-radius:12px; padding:14px; margin-bottom:12px; background:#fff;">
+      <div class="aniversario-admin-card" style="border:1px solid #ddd; border-radius:12px; padding:14px; margin-bottom:12px; background:#fff;">
         <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
           <div>
             <h4 style="margin:0 0 4px; color:#003366;">${escape(n.titulo)}</h4>
@@ -186,11 +186,11 @@
     document.getElementById("modal-generic-corpo").innerHTML = `
       <article>
         ${data.capa_url ? `<img src="${escape(data.capa_url)}" style="width:100%; border-radius:8px; margin-bottom:12px;">` : ''}
-        <div class="markdown-body informe-markdown"></div>
+        <div class="markdown-body aniversario-markdown"></div>
         <div style="margin-top:14px; text-align:right;"><button class="ui-button ui-button-outline" onclick="Utils.fecharModal('modal-generic')">Fechar</button></div>
       </article>
     `;
-    const md = document.querySelector("#modal-generic-corpo .informe-markdown");
+    const md = document.querySelector("#modal-generic-corpo .aniversario-markdown");
     if (window.InformesRenderer?.mountRenderedMarkdown) window.InformesRenderer.mountRenderedMarkdown(md, data.conteudo || "");
     modal.style.display = "flex";
   }
@@ -247,18 +247,18 @@
         <div class="field-group"><label>Título</label><input class="ui-input" name="titulo" value="${escape(informe.titulo)}" required></div>
         <div class="field-group" style="margin-top:10px;"><label>Subtítulo</label><input class="ui-input" name="subtitulo" value="${escape(informe.subtitulo || "")}"></div>
         <div class="field-group" style="margin-top:10px;"><label>Conteúdo</label><textarea class="ui-textarea" name="conteudo" rows="8" required>${escape(informe.conteudo || "")}</textarea></div>
-        <div class="field-group" style="margin-top:10px;"><label>Data do informe</label><input class="ui-input" type="date" name="data_informe" value="${escape(informe.data_informe || "")}"></div>
+        <div class="field-group" style="margin-top:10px;"><label>Data do aniversário</label><input class="ui-input" type="date" name="data_informe" value="${escape(informe.data_informe || "")}"></div>
         ${id ? `
           <div class="field-group" style="margin-top:10px;">
             <label>Adicionar imagem na galeria</label>
-            <input class="ui-input" type="file" id="informe-upload-midia" accept="image/*">
+            <input class="ui-input" type="file" id="aniversario-upload-midia" accept="image/*">
             <small style="color:#64748b;">A capa deve ser escolhida entre as imagens anexadas.</small>
           </div>
           <div class="field-group" style="margin-top:10px;">
             <label>Galeria de imagens anexadas</label>
-            <div id="informe-galeria-edit">${renderGaleriaEdicao(informe.midias, informe.capa_midia_id)}</div>
+            <div id="aniversario-galeria-edit">${renderGaleriaEdicao(informe.midias, informe.capa_midia_id)}</div>
           </div>
-        ` : '<p style="margin-top:10px; color:#64748b;">Após criar o informe, você poderá anexar imagens e definir a capa.</p>'}
+        ` : '<p style="margin-top:10px; color:#64748b;">Após criar o aniversário, você poderá anexar imagens e definir a capa.</p>'}
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
           <button type="button" class="ui-button ui-button-outline" onclick="Utils.fecharModal('modal-generic')">Cancelar</button>
           <button type="submit" class="ui-button ui-button-secondary">Salvar rascunho</button>
@@ -288,7 +288,7 @@
     };
 
     if (id) {
-      const input = document.getElementById("informe-upload-midia");
+      const input = document.getElementById("aniversario-upload-midia");
       if (input) {
         input.addEventListener("change", async () => {
           const file = input.files && input.files[0];
@@ -328,25 +328,25 @@
     if (!ehGestaoAniversarios()) return;
     if (!confirm("Publicar aniversário atual? Após publicar ele ficará visível para filiados.")) return;
     const resp = await requestJson(`/api/aniversarios/${id}/publicar`, { method: "POST" });
-    if (!resp.ok) return alert(resp.data?.message || "Falha ao publicar informe atual.");
+    if (!resp.ok) return alert(resp.data?.message || "Falha ao publicar aniversário atual.");
     await carregarAniversarios();
-    alert("Informe publicado com sucesso.");
+    alert("Aniversário publicado com sucesso.");
   }
 
   async function arquivarAniversarioAtual(id) {
     if (!ehGestaoAniversarios()) return;
     if (!confirm("Arquivar aniversário atual? Esta ação consolida o conteúdo e bloqueia novas edições.")) return;
     const resp = await requestJson(`/api/aniversarios/${id}/arquivar`, { method: "POST" });
-    if (!resp.ok) return alert(resp.data?.message || "Falha ao arquivar informe atual.");
+    if (!resp.ok) return alert(resp.data?.message || "Falha ao arquivar aniversário atual.");
     await carregarAniversarios();
-    alert("Aniversário atual arquivado com sucesso. Agora você pode criar um novo informe atual.");
+    alert("Aniversário atual arquivado com sucesso. Agora você pode criar um novo aniversário atual.");
   }
 
   async function excluirAniversarioAtual(id) {
     if (!ehGestaoAniversarios()) return;
-    if (!confirm("Deseja EXCLUIR permanentemente este informe?")) return;
+    if (!confirm("Deseja EXCLUIR permanentemente este aniversário?")) return;
     const resp = await requestJson(`/api/aniversarios/${id}`, { method: "DELETE" });
-    if (!resp.ok) return alert(resp.data?.message || "Erro ao excluir informe.");
+    if (!resp.ok) return alert(resp.data?.message || "Erro ao excluir aniversário.");
     Utils.fecharModal("modal-generic");
     await carregarAniversarios();
   }
