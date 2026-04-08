@@ -65,6 +65,7 @@ async function criarAniversarioAutomatico({ aniversariantes }) {
   }
 
   const card = buildBirthdayCard({ aniversariantes, date: new Date() });
+  const dataInforme = `${todayIso}T12:00:00.000Z`;
 
   const criado = await requestJson(`${apiBase}/api/aniversarios`, {
     method: 'POST',
@@ -73,7 +74,7 @@ async function criarAniversarioAutomatico({ aniversariantes }) {
       titulo: card.titulo,
       subtitulo: card.subtitulo,
       conteudo: card.conteudo,
-      data_informe: new Date().toISOString().slice(0, 10),
+      data_informe: dataInforme,
       destaque: true,
     }),
   });
