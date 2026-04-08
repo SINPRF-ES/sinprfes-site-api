@@ -4,11 +4,13 @@ const pool = require('../config/db');
 const filiadosService = require('../services/filiados.service');
 const emailService = require('../services/email.service');
 const aniversariosAutoService = require('../services/aniversariosAuto.service');
+const birthdayGreetingsService = require('../services/birthdayGreetings.service');
 
 jest.mock('../config/db');
 jest.mock('../services/filiados.service');
 jest.mock('../services/email.service');
 jest.mock('../services/aniversariosAuto.service');
+jest.mock('../services/birthdayGreetings.service');
 
 describe('birthdayCron - runBirthdayScan', () => {
   let mockClient;
@@ -42,6 +44,14 @@ describe('birthdayCron - runBirthdayScan', () => {
     ]);
     emailService.enviarRelatorioAniversariantes.mockResolvedValue();
     aniversariosAutoService.criarAniversarioAutomatico.mockResolvedValue({ created: true, published: true });
+    birthdayGreetingsService.getReferenceDateISO.mockReturnValue('2026-04-08');
+    birthdayGreetingsService.sendBirthdayGreetingsBatch.mockResolvedValue({
+      totalBirthdaysFound: 1,
+      eligibleForIndividualSend: 1,
+      sentSuccessfully: 1,
+      failed: 0,
+      skipped: 0,
+    });
 
     await runBirthdayScan();
 
@@ -54,6 +64,10 @@ describe('birthdayCron - runBirthdayScan', () => {
     expect(emailService.enviarRelatorioAniversariantes).toHaveBeenCalledWith({
       dateStr: todayStr,
       aniversariantes: expect.any(Array)
+    });
+    expect(birthdayGreetingsService.sendBirthdayGreetingsBatch).toHaveBeenCalledWith({
+      aniversariantes: expect.any(Array),
+      referenceDate: '2026-04-08',
     });
     expect(aniversariosAutoService.criarAniversarioAutomatico).toHaveBeenCalledWith({ aniversariantes: expect.any(Array) });
     expect(mockClient.query).toHaveBeenCalledWith(
@@ -108,6 +122,14 @@ describe('birthdayCron - runBirthdayScan', () => {
 
     filiadosService.buscarAniversariantesDoDia.mockResolvedValue([]);
     emailService.enviarRelatorioAniversariantes.mockResolvedValue();
+    birthdayGreetingsService.getReferenceDateISO.mockReturnValue('2026-04-08');
+    birthdayGreetingsService.sendBirthdayGreetingsBatch.mockResolvedValue({
+      totalBirthdaysFound: 0,
+      eligibleForIndividualSend: 0,
+      sentSuccessfully: 0,
+      failed: 0,
+      skipped: 0,
+    });
 
     await runBirthdayScan();
 
@@ -115,7 +137,44 @@ describe('birthdayCron - runBirthdayScan', () => {
       dateStr: todayStr,
       aniversariantes: []
     });
+    expect(birthdayGreetingsService.sendBirthdayGreetingsBatch).toHaveBeenCalledWith({
+      aniversariantes: [],
+      referenceDate: '2026-04-08',
+    });
     expect(aniversariosAutoService.criarAniversarioAutomatico).not.toHaveBeenCalled();
+  });
+
+  it('should keep summary email flow even when personalized sends fail individually', async () => {
+    const todayStr = new Date().toLocaleDateString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+    });
+
+    mockClient.query.mockImplementation((query) => {
+      if (query.includes('SELECT last_run_date')) {
+        return Promise.resolve({ rows: [{ last_run_date: '01/01/2000' }] });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+
+    filiadosService.buscarAniversariantesDoDia.mockResolvedValue([{ nome: 'Pessoa', tipo: 'FILIADO' }]);
+    emailService.enviarRelatorioAniversariantes.mockResolvedValue();
+    birthdayGreetingsService.getReferenceDateISO.mockReturnValue('2026-04-08');
+    birthdayGreetingsService.sendBirthdayGreetingsBatch.mockResolvedValue({
+      totalBirthdaysFound: 1,
+      eligibleForIndividualSend: 1,
+      sentSuccessfully: 0,
+      failed: 1,
+      skipped: 0,
+    });
+    aniversariosAutoService.criarAniversarioAutomatico.mockResolvedValue({ created: true, published: true });
+
+    await runBirthdayScan();
+
+    expect(emailService.enviarRelatorioAniversariantes).toHaveBeenCalledWith({
+      dateStr: todayStr,
+      aniversariantes: expect.any(Array),
+    });
+    expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
   });
   it('should rollback and throw error on failure', async () => {
     mockClient.query.mockImplementation((query, params) => {
