@@ -14,9 +14,14 @@
 
         const isComunicador = perfil === 'COMUNICADOR';
 
+        const modules = window.AreaFiliadoContentModules || {};
+        const informesModule = modules.INFORMES || { label: 'Informes', emoji: '📰' };
+        const aniversariosModule = modules.ANIVERSARIOS || { label: 'Aniversários', emoji: '🎂' };
+
         const actions = [
             { label: 'Meus Dados', subtitle: 'Atualize seu cadastro', icon: '👤', target: 'sec-meus-dados' },
-            { label: 'Informes', subtitle: 'Avisos e comunicados', icon: '📰', target: 'sec-informes' },
+            { label: informesModule.label, subtitle: 'Avisos e comunicados', icon: informesModule.emoji, target: 'sec-informes' },
+            { label: aniversariosModule.label, subtitle: 'Mural de aniversariantes', icon: aniversariosModule.emoji, target: 'sec-aniversarios' },
             { label: 'Ressarcimento', subtitle: 'Solicite seu reembolso', icon: '💸', target: 'sec-ressarcimento' },
         ];
 

@@ -1,6 +1,10 @@
 (function (global) {
   if (global.AreaFiliadoNavigation) return;
 
+  const modules = global.AreaFiliadoContentModules || {};
+  const informesModule = modules.INFORMES || { label: 'Informes', emoji: '📢' };
+  const aniversariosModule = modules.ANIVERSARIOS || { label: 'Aniversários', emoji: '🎂' };
+
   const SECTION_META = {
     principal: { label: 'Área do Filiado', icon: '🏠' },
     servicos: { label: 'Serviços e Participação', icon: '🧩' },
@@ -11,7 +15,8 @@
     { id: 'nav-home', target: 'sec-home', label: 'Página Inicial', icon: '🏠', order: 10, section: 'principal' },
     { id: 'nav-meus-dados', target: 'sec-meus-dados', label: 'Meus Dados', icon: '👤', order: 20, section: 'principal' },
     { id: 'nav-filiados', target: 'sec-filiados', label: 'Filiados', icon: '👥', order: 30, section: 'principal', visible: ({ isComunicador }) => !isComunicador },
-    { id: 'nav-informes', target: 'sec-informes', label: 'Informes', icon: '📢', order: 40, section: 'principal' },
+    { id: 'nav-informes', target: 'sec-informes', label: informesModule.label, icon: informesModule.emoji, order: 40, section: 'principal' },
+    { id: 'nav-aniversarios', target: 'sec-aniversarios', label: aniversariosModule.label, icon: aniversariosModule.emoji, order: 45, section: 'principal' },
     { id: 'nav-publicacoes', target: 'sec-publicacoes', label: 'Publicações', icon: '📚', order: 50, section: 'principal', visible: ({ isComunicador }) => !isComunicador },
     { id: 'nav-convenios', target: 'sec-convenios', label: 'Convênios', icon: '🤝', order: 60, section: 'principal' },
     { id: 'nav-estatuto', target: 'sec-estatuto', label: 'Estatuto', icon: '📜', order: 70, section: 'principal' },

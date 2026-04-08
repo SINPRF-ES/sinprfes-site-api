@@ -34,6 +34,7 @@
     const { inicializarAssembleias } = window.Assembleias || {};
     const { inicializarRepasse } = window.Repasse || {};
     const { inicializarInformes } = window.InformesAdmin || {};
+    const { inicializarAniversarios } = window.AniversariosAdmin || {};
     const { inicializarNoticias } = window.NoticiasAdmin || {};
     const { inicializarRelatorios } = window.Relatorios || {};
     const { inicializarEstatisticas } = window.EstatisticasGestao || {};
@@ -64,6 +65,11 @@
     let perfil = (userInfo.perfil_acesso || userInfo.perfil || "FILIADO").toUpperCase();
     const informeRefPath = (() => {
       const match = window.location.pathname.match(/^\/area-filiado\/informes\/([^/]+)$/);
+      return match ? decodeURIComponent(match[1]) : null;
+    })();
+
+    const aniversarioRefPath = (() => {
+      const match = window.location.pathname.match(/^\/area-filiado\/aniversarios\/([^/]+)$/);
       return match ? decodeURIComponent(match[1]) : null;
     })();
 
@@ -125,6 +131,14 @@
             await inicializarInformes(perfil);
             if (informeRefPath && window.InformesAdmin?.abrirVisualizacaoInformePorRef) {
               await window.InformesAdmin.abrirVisualizacaoInformePorRef(informeRefPath);
+            }
+          }
+        }
+        else if (abaAlvo === "sec-aniversarios") {
+          if (inicializarAniversarios) {
+            await inicializarAniversarios(perfil);
+            if (aniversarioRefPath && window.AniversariosAdmin?.abrirVisualizacaoAniversarioPorRef) {
+              await window.AniversariosAdmin.abrirVisualizacaoAniversarioPorRef(aniversarioRefPath);
             }
           }
         }
@@ -217,6 +231,13 @@
         const btnInformes = document.getElementById("nav-informes") || document.getElementById("nav-informes-admin");
         if (btnInformes) {
           btnInformes.click();
+        }
+      }
+
+      if (aniversarioRefPath) {
+        const btnAniversarios = document.getElementById("nav-aniversarios");
+        if (btnAniversarios) {
+          btnAniversarios.click();
         }
       }
 

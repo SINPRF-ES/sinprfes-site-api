@@ -3,6 +3,7 @@
 export type DrawerParamList = {
   'Início': undefined;
   Noticias: undefined;
+  Aniversarios: undefined;
   Informes: undefined;
   MeusDados: undefined;
   Filiados: undefined;

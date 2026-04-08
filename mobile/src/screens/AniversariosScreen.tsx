@@ -1,7 +1,7 @@
 import React, { useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { fetchInformes, InformePost } from '../services/informesService';
+import { fetchAniversarios, AniversarioPost } from '../services/aniversariosService';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
@@ -9,13 +9,13 @@ import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
 
-export default function InformesScreen() {
+export default function AniversariosScreen() {
   const navigation = useNavigation<any>();
   const { usuario } = useAuth();
 
-  const { data: informes, isLoading, isError, refetch, isRefetching } = useQuery({
-    queryKey: ['informes'],
-    queryFn: () => fetchInformes(),
+  const { data: aniversarios, isLoading, isError, refetch, isRefetching } = useQuery({
+    queryKey: ['aniversarios'],
+    queryFn: () => fetchAniversarios(),
   });
 
   const formatDate = (dateString?: string | null) => {
@@ -26,14 +26,14 @@ export default function InformesScreen() {
     return raw;
   };
 
-  const formatFriendlyRef = (ref?: string | null) => {
+  const formatFriendlyBirthdayRef = (ref?: string | null) => {
     if (!ref) return '';
-    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-informe-(\d+)$/i);
-    if (!match) return 'Informe interno';
-    return `Informe #${match[4]} de ${match[3]}/${match[2]}/${match[1]}`;
+    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-aniversario-(\d+)$/i);
+    if (!match) return 'Aniversário interno';
+    return `Aniversário #${match[4]} de ${match[3]}/${match[2]}/${match[1]}`;
   };
 
-  const renderItem = ({ item }: { item: InformePost }) => {
+  const renderItem = ({ item }: { item: AniversarioPost }) => {
     try {
       const coverUrl = item.capa_url;
       const isRascunho = item.status === 'RASCUNHO';
@@ -41,7 +41,7 @@ export default function InformesScreen() {
       return (
         <TouchableOpacity
           style={[styles.card, isRascunho && styles.draftCard]}
-          onPress={() => navigation.navigate('InformeDetalhe', item.public_ref ? { publicRef: item.public_ref, module: 'informes' } : { newsId: item.id, module: 'informes' })}
+          onPress={() => navigation.navigate('InformeDetalhe', item.public_ref ? { publicRef: item.public_ref, module: 'aniversarios' } : { newsId: item.id, module: 'aniversarios' })}
         >
           {coverUrl ? (
             <Image
@@ -58,7 +58,7 @@ export default function InformesScreen() {
             <View style={styles.cardHeader}>
               <View style={styles.cardMeta}>
                 <Text style={styles.date}>{formatDate(item.data_informe || item.published_at || item.created_at)}</Text>
-                {!!item.public_ref && <Text style={styles.refText}>{formatFriendlyRef(item.public_ref)}</Text>}
+                {!!item.public_ref && <Text style={styles.refText}>{formatFriendlyBirthdayRef(item.public_ref)}</Text>}
               </View>
               {isRascunho && (
                 <View style={styles.draftBadge}>
@@ -72,25 +72,25 @@ export default function InformesScreen() {
         </TouchableOpacity>
       );
     } catch (err) {
-      logger.error('Error rendering Informe item', err, { newsId: item?.id });
+      logger.error('Error rendering Aniversario item', err as any, { newsId: item?.id });
       return null;
     }
   };
 
-  let ehGestaoInformes = false;
+  let ehGestaoAniversarios = false;
   try {
-    ehGestaoInformes = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
+    ehGestaoAniversarios = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
   } catch (err) {
-    logger.error('Error checking management permission in InformesScreen', err);
+    logger.error('Error checking management permission in AniversariosScreen', err as any);
   }
 
   useLayoutEffect(() => {
     const actions: MenuAction[] = [];
 
-    if (ehGestaoInformes) {
+    if (ehGestaoAniversarios) {
       actions.push({
-        label: 'Criar informe',
-        onPress: () => navigation.navigate('InformeEditor', { newsId: null, module: 'informes' }),
+        label: 'Criar aniversário',
+        onPress: () => navigation.navigate('InformeEditor', { newsId: null, module: 'aniversarios' }),
         icon: 'plus'
       });
     }
@@ -104,13 +104,13 @@ export default function InformesScreen() {
     navigation.setOptions({
       headerRight: () => <HeaderMenu actions={actions} />,
     });
-  }, [navigation, ehGestaoInformes, refetch]);
+  }, [navigation, ehGestaoAniversarios, refetch]);
 
   if (isLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#003366" />
-        <Text style={styles.loadingText}>Carregando informes...</Text>
+        <Text style={styles.loadingText}>Carregando aniversários...</Text>
       </View>
     );
   }
@@ -119,7 +119,7 @@ export default function InformesScreen() {
     return (
       <View style={styles.centered}>
         <FontAwesome name="exclamation-circle" size={50} color="#d32f2f" />
-        <Text style={styles.errorText}>Erro ao carregar informes.</Text>
+        <Text style={styles.errorText}>Erro ao carregar aniversários.</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
           <Text style={styles.retryText}>Tentar novamente</Text>
         </TouchableOpacity>
@@ -130,16 +130,16 @@ export default function InformesScreen() {
   return (
     <SafeScreen style={styles.container}>
       <FlatList
-        data={informes}
+        data={aniversarios}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} color="#003366" />
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} colors={["#003366"]} />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Nenhum informe encontrado.</Text>
+            <Text style={styles.emptyText}>Nenhum aniversário encontrado.</Text>
           </View>
         }
       />

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, TouchableOpacity, Dimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { fetchInforme, fetchInformeByRef } from '../services/informesService';
+import { fetchAniversario, fetchAniversarioByRef } from '../services/aniversariosService';
 import { useAuth } from '../hooks/useAuth';
 import { FontAwesome } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
@@ -10,14 +11,15 @@ import SafeScreen from '../components/SafeScreen';
 const { width } = Dimensions.get('window');
 
 export default function InformeDetalheScreen({ route, navigation }: any) {
-  const { newsId, publicRef } = route.params || {};
+  const { newsId, publicRef, module = 'informes' } = route.params || {};
+  const isAniversarios = module === 'aniversarios';
   const { usuario } = useAuth();
 
-  const { data: informe, isLoading, isError, refetch } = useQuery({
-    queryKey: ['informe', newsId || publicRef],
+  const { data: informe, isLoading, isError, refetch } = useQuery<any>({
+    queryKey: [isAniversarios ? 'aniversario' : 'informe', newsId || publicRef],
     queryFn: () => {
-      if (publicRef) return fetchInformeByRef(publicRef);
-      return fetchInforme(newsId);
+      if (publicRef) return isAniversarios ? fetchAniversarioByRef(publicRef) : fetchInformeByRef(publicRef);
+      return isAniversarios ? fetchAniversario(newsId) : fetchInforme(newsId);
     },
   });
 
@@ -31,9 +33,10 @@ export default function InformeDetalheScreen({ route, navigation }: any) {
 
   const formatFriendlyRef = (ref?: string | null) => {
     if (!ref) return '';
-    const match = String(ref).match(/^(\d{4})(\d{2})(\d{2})-informe-(\d+)$/i);
-    if (!match) return 'Informe interno';
-    return `Informe #${match[4]} de ${match[3]}/${match[2]}/${match[1]}`;
+    const regex = isAniversarios ? /^(\d{4})(\d{2})(\d{2})-aniversario-(\d+)$/i : /^(\d{4})(\d{2})(\d{2})-informe-(\d+)$/i;
+    const match = String(ref).match(regex);
+    if (!match) return isAniversarios ? 'Aniversário interno' : 'Informe interno';
+    return `${isAniversarios ? 'Aniversário' : 'Informe'} #${match[4]} de ${match[3]}/${match[2]}/${match[1]}`;
   };
 
   if (isLoading) {
@@ -47,7 +50,7 @@ export default function InformeDetalheScreen({ route, navigation }: any) {
   if (isError || !informe) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Erro ao carregar os detalhes do informe.</Text>
+        <Text style={styles.errorText}>Erro ao carregar os detalhes do conteúdo.</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
           <Text style={styles.retryText}>Tentar novamente</Text>
         </TouchableOpacity>
@@ -78,7 +81,7 @@ export default function InformeDetalheScreen({ route, navigation }: any) {
             </View>
             {canEdit && (
               <TouchableOpacity
-                onPress={() => navigation.navigate('InformeEditor', { newsId: informe.id })}
+                onPress={() => navigation.navigate('InformeEditor', { newsId: informe.id, module })}
                 style={styles.editButton}
               >
                 <FontAwesome name="edit" size={18} color="#003366" />
@@ -90,7 +93,7 @@ export default function InformeDetalheScreen({ route, navigation }: any) {
           <Text style={styles.title}>{informe.titulo}</Text>
 
           <View style={styles.markdownContainer}>
-            <Markdown style={markdownStyles}>
+            <Markdown style={markdownStyles as any}>
               {informe.conteudo}
             </Markdown>
           </View>
