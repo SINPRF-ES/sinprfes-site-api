@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS aniversarios (
     subtitulo TEXT,
     conteudo TEXT NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'RASCUNHO',
-    autor_id UUID REFERENCES filiados(id),
+    -- `filiados.id` é INTEGER no schema atual, portanto `autor_id` precisa ser INTEGER.
+    autor_id INTEGER REFERENCES filiados(id),
     capa_url TEXT,
     capa_midia_id UUID,
     destaque BOOLEAN DEFAULT FALSE,
