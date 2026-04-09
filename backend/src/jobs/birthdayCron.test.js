@@ -23,6 +23,7 @@ describe('birthdayCron - runBirthdayScan', () => {
     };
     pool.connect = jest.fn().mockResolvedValue(mockClient);
     console.log = jest.fn();
+    console.warn = jest.fn();
     console.error = jest.fn();
   });
 
@@ -104,6 +105,43 @@ describe('birthdayCron - runBirthdayScan', () => {
     expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Skip: BIRTHDAY_SCAN já executado hoje'));
     expect(filiadosService.buscarAniversariantesDoDia).not.toHaveBeenCalled();
     expect(mockClient.release).toHaveBeenCalled();
+  });
+
+  it('should create missing BIRTHDAY_SCAN control row and continue execution', async () => {
+    const todayStr = new Date().toLocaleDateString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+    });
+
+    mockClient.query.mockImplementation((query) => {
+      if (query.includes('SELECT last_run_date')) {
+        return Promise.resolve({ rows: [] });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+
+    filiadosService.buscarAniversariantesDoDia.mockResolvedValue([]);
+    emailService.enviarRelatorioAniversariantes.mockResolvedValue();
+    birthdayGreetingsService.getReferenceDateISO.mockReturnValue('2026-04-08');
+    birthdayGreetingsService.sendBirthdayGreetingsBatch.mockResolvedValue({
+      totalBirthdaysFound: 0,
+      eligibleForIndividualSend: 0,
+      sentSuccessfully: 0,
+      failed: 0,
+      skipped: 0,
+    });
+
+    await runBirthdayScan();
+
+    expect(mockClient.query).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO job_runs (job_name, last_run_date, updated_at)'),
+      ['BIRTHDAY_SCAN', '01/01/1900']
+    );
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('Registro BIRTHDAY_SCAN ausente em job_runs'));
+    expect(mockClient.query).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE job_runs SET last_run_date = $1'),
+      [todayStr, 'BIRTHDAY_SCAN']
+    );
+    expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
   });
 
 

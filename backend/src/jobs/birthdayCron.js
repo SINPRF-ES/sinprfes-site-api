@@ -23,17 +23,22 @@ async function runBirthdayScan() {
       [jobName]
     );
 
+    let lastRun = null;
     if (res.rows.length === 0) {
-      console.error(`💥 [Job] Registro ${jobName} não encontrado na tabela job_runs.`);
-      await client.query('ROLLBACK');
-      return;
+      await client.query(
+        'INSERT INTO job_runs (job_name, last_run_date, updated_at) VALUES ($1, $2, NOW())',
+        [jobName, '01/01/1900']
+      );
+      lastRun = '01/01/1900';
+      console.warn(`⚠️ [Job] Registro ${jobName} ausente em job_runs. Registro inicial criado.`);
+    } else {
+      lastRun = res.rows[0].last_run_date;
     }
 
     const todayStr = new Date().toLocaleDateString('pt-BR', {
       timeZone: 'America/Sao_Paulo',
     });
 
-    const lastRun = res.rows[0].last_run_date;
     console.log(`[Job] lastRun=${lastRun} | todayStr=${todayStr}`);
 
     if (lastRun === todayStr) {
