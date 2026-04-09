@@ -21,21 +21,23 @@ async function runReportCleanup() {
       [JOB_NAME]
     );
 
+    let lastRun = null;
     if (res.rows.length === 0) {
       // Se não existe, cria o registro inicial para permitir execuções futuras
       await client.query(
-        'INSERT INTO job_runs (job_name, last_run_date, updated_at) VALUES ($1, $2, NOW())',
-        [JOB_NAME, '1900-01-01']
+        'INSERT INTO job_runs (job_name, last_run_date, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (job_name) DO NOTHING',
+        [JOB_NAME, '01/01/1900']
       );
-      log.info("Job.ReportCleanup.RegistroCriado", { JOB_NAME });
+      lastRun = '01/01/1900';
+      log.warn("Job.ReportCleanup.RegistroCriado", { JOB_NAME });
+    } else {
+      lastRun = res.rows[0].last_run_date;
     }
 
     // Determina a data atual no timezone de Brasília
     const todayStr = new Date().toLocaleDateString('pt-BR', {
       timeZone: 'America/Sao_Paulo',
     });
-
-    const lastRun = res.rows.length > 0 ? res.rows[0].last_run_date : '1900-01-01';
     if (lastRun === todayStr) {
       log.info("Job.ReportCleanup.JaExecutadoHoje", { todayStr });
       await client.query('ROLLBACK');

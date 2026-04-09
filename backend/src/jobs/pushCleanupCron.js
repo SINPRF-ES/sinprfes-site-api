@@ -21,18 +21,22 @@ async function runPushCleanup() {
       [JOB_NAME]
     );
 
+    let lastRun = null;
     if (res.rows.length === 0) {
-      log.error("Job.PushCleanup.RegistroNaoEncontrado", { JOB_NAME });
-      await client.query('ROLLBACK');
-      return;
+      await client.query(
+        'INSERT INTO job_runs (job_name, last_run_date, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (job_name) DO NOTHING',
+        [JOB_NAME, '01/01/1900']
+      );
+      lastRun = '01/01/1900';
+      log.warn("Job.PushCleanup.RegistroCriado", { JOB_NAME });
+    } else {
+      lastRun = res.rows[0].last_run_date;
     }
 
     // Determina a data atual no timezone de Brasília
     const todayStr = new Date().toLocaleDateString('pt-BR', {
       timeZone: 'America/Sao_Paulo',
     });
-
-    const lastRun = res.rows[0].last_run_date;
     if (lastRun === todayStr) {
       log.info("Job.PushCleanup.JaExecutadoHoje", { todayStr });
       await client.query('ROLLBACK');

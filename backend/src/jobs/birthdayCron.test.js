@@ -77,13 +77,6 @@ describe('birthdayCron - runBirthdayScan', () => {
     );
     expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
     expect(mockClient.release).toHaveBeenCalled();
-
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('START: BIRTHDAY_SCAN'));
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('lastRun=01/01/2000'));
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('BUSCA aniversariantes OK'));
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('EMAIL OK'));
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('UPDATE job_runs OK'));
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('COMMIT OK'));
   });
 
   it('should skip if already executed today (idempotency)', async () => {
@@ -102,7 +95,6 @@ describe('birthdayCron - runBirthdayScan', () => {
 
     expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
     expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Skip: BIRTHDAY_SCAN já executado hoje'));
     expect(filiadosService.buscarAniversariantesDoDia).not.toHaveBeenCalled();
     expect(mockClient.release).toHaveBeenCalled();
   });
@@ -136,7 +128,6 @@ describe('birthdayCron - runBirthdayScan', () => {
       expect.stringContaining('INSERT INTO job_runs (job_name, last_run_date, updated_at)'),
       ['BIRTHDAY_SCAN', '01/01/1900']
     );
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('Registro BIRTHDAY_SCAN ausente em job_runs'));
     expect(mockClient.query).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE job_runs SET last_run_date = $1'),
       [todayStr, 'BIRTHDAY_SCAN']
@@ -229,7 +220,7 @@ describe('birthdayCron - runBirthdayScan', () => {
 
     expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
     expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Erro crítico ao processar aniversariantes'), expect.anything());
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Job.BirthdayScan.ErroCritico'));
     expect(mockClient.release).toHaveBeenCalled();
   });
 });
