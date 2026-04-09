@@ -26,12 +26,23 @@ async function runBirthdayScan() {
 
     let lastRun = null;
     if (res.rows.length === 0) {
-      await client.query(
+      const insertRes = await client.query(
         'INSERT INTO job_runs (job_name, last_run_date, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (job_name) DO NOTHING',
         [jobName, '01/01/1900']
       );
-      lastRun = '01/01/1900';
-      log.warn("Job.BirthdayScan.RegistroCriado", { jobName });
+
+      const lockRes = await client.query(
+        'SELECT last_run_date FROM job_runs WHERE job_name = $1 FOR UPDATE',
+        [jobName]
+      );
+      if (lockRes.rows.length === 0) {
+        throw new Error(`Falha ao bootstrap de job_runs para ${jobName}`);
+      }
+
+      lastRun = lockRes.rows[0].last_run_date;
+      if (insertRes.rowCount === 1) {
+        log.warn("Job.BirthdayScan.RegistroCriado", { jobName });
+      }
     } else {
       lastRun = res.rows[0].last_run_date;
     }
