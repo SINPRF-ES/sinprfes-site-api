@@ -104,9 +104,17 @@ describe('birthdayCron - runBirthdayScan', () => {
       timeZone: 'America/Sao_Paulo',
     });
 
+    let selectCount = 0;
     mockClient.query.mockImplementation((query) => {
       if (query.includes('SELECT last_run_date')) {
-        return Promise.resolve({ rows: [] });
+        selectCount += 1;
+        if (selectCount === 1) {
+          return Promise.resolve({ rows: [] });
+        }
+        return Promise.resolve({ rows: [{ last_run_date: '01/01/1900' }] });
+      }
+      if (query.includes('INSERT INTO job_runs')) {
+        return Promise.resolve({ rowCount: 1, rows: [] });
       }
       return Promise.resolve({ rows: [] });
     });
@@ -127,6 +135,10 @@ describe('birthdayCron - runBirthdayScan', () => {
     expect(mockClient.query).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO job_runs (job_name, last_run_date, updated_at)'),
       ['BIRTHDAY_SCAN', '01/01/1900']
+    );
+    expect(mockClient.query).toHaveBeenCalledWith(
+      expect.stringContaining('SELECT last_run_date FROM job_runs WHERE job_name = $1 FOR UPDATE'),
+      ['BIRTHDAY_SCAN']
     );
     expect(mockClient.query).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE job_runs SET last_run_date = $1'),
@@ -222,5 +234,36 @@ describe('birthdayCron - runBirthdayScan', () => {
     expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
     expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Job.BirthdayScan.ErroCritico'));
     expect(mockClient.release).toHaveBeenCalled();
+  });
+
+  it('should skip when bootstrap insert conflicts and row was already executed today', async () => {
+    const todayStr = new Date().toLocaleDateString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+    });
+
+    let selectCount = 0;
+    mockClient.query.mockImplementation((query) => {
+      if (query.includes('SELECT last_run_date')) {
+        selectCount += 1;
+        if (selectCount === 1) {
+          return Promise.resolve({ rows: [] });
+        }
+        return Promise.resolve({ rows: [{ last_run_date: todayStr }] });
+      }
+      if (query.includes('INSERT INTO job_runs')) {
+        return Promise.resolve({ rowCount: 0, rows: [] });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+
+    await runBirthdayScan();
+
+    expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
+    expect(mockClient.query).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO job_runs (job_name, last_run_date, updated_at)'),
+      ['BIRTHDAY_SCAN', '01/01/1900']
+    );
+    expect(filiadosService.buscarAniversariantesDoDia).not.toHaveBeenCalled();
+    expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
   });
 });
