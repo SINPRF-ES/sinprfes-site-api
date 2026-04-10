@@ -105,7 +105,8 @@ async function resolvePermiteComunicacaoSelect() {
 
     permiteComunicacaoColumnExists = rows[0]?.exists === true;
     if (!permiteComunicacaoColumnExists) {
-      log.warn("FiliadosService.PermiteComunicacaoAusenteFallbackAtivo");
+      const missingColumnLogLevel = process.env.NODE_ENV === 'production' ? 'warn' : 'info';
+      log[missingColumnLogLevel]("FiliadosService.PermiteComunicacaoAusenteFallbackAtivo");
     }
   }
 
