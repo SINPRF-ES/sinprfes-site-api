@@ -87,6 +87,34 @@ const FILIADO_COLUMNS_WITH_ALIAS = FILIADO_COLUMNS.split(",")
   .map((c) => `f.${c.trim()}`)
   .join(", ");
 
+let permiteComunicacaoColumnExists = null;
+
+async function resolvePermiteComunicacaoSelect() {
+  if (permiteComunicacaoColumnExists === null) {
+    const { rows } = await pool.query(
+      `
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'filiados'
+          AND column_name = 'permite_comunicacao'
+      ) AS exists
+      `
+    );
+
+    permiteComunicacaoColumnExists = rows[0]?.exists === true;
+    if (!permiteComunicacaoColumnExists) {
+      const missingColumnLogLevel = process.env.NODE_ENV === 'production' ? 'warn' : 'info';
+      log[missingColumnLogLevel]("FiliadosService.PermiteComunicacaoAusenteFallbackAtivo");
+    }
+  }
+
+  return permiteComunicacaoColumnExists
+    ? "f.permite_comunicacao"
+    : "NULL::BOOLEAN";
+}
+
 /**
  * Busca filiado pelo CPF (normalizado).
  */
@@ -758,6 +786,7 @@ async function buscarNomesPorIds(ids) {
  * Busca aniversariantes do dia (filiados e dependentes)
  */
 async function buscarAniversariantesDoDia() {
+  const permiteComunicacaoSelect = await resolvePermiteComunicacaoSelect();
   const query = `
     SELECT * FROM (
       -- Filiados
@@ -767,7 +796,7 @@ async function buscarAniversariantesDoDia() {
         f.data_nascimento,
         f.email1,
         f.email2,
-        f.permite_comunicacao,
+        ${permiteComunicacaoSelect} as permite_comunicacao,
         NULL::INTEGER as dependente_ordem
       FROM filiados f
       WHERE
@@ -788,7 +817,7 @@ async function buscarAniversariantesDoDia() {
         f.dep${i}_data_nascimento as data_nascimento,
         f.email1,
         f.email2,
-        f.permite_comunicacao,
+        ${permiteComunicacaoSelect} as permite_comunicacao,
         ${i}::INTEGER as dependente_ordem
       FROM filiados f
       WHERE

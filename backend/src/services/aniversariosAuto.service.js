@@ -41,7 +41,8 @@ async function criarAniversarioAutomatico({ aniversariantes }) {
 
   const token = process.env.INTERNAL_API_TOKEN;
   if (!token) {
-    log.warn('ANIVERSARIOS_AUTO_TOKEN_MISSING');
+    const missingTokenLogLevel = process.env.NODE_ENV === 'production' ? 'warn' : 'info';
+    log[missingTokenLogLevel]('ANIVERSARIOS_AUTO_TOKEN_MISSING');
     return { created: false, reason: 'missing_token' };
   }
 
