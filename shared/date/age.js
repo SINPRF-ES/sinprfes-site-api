@@ -3,6 +3,42 @@
  * Mantém consistência entre Mobile e Site.
  */
 
+function parseBirthDate(dateStr) {
+  const raw = String(dateStr || '').trim();
+
+  const brMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  let day;
+  let month;
+  let year;
+
+  if (brMatch) {
+    day = Number(brMatch[1]);
+    month = Number(brMatch[2]);
+    year = Number(brMatch[3]);
+  } else if (isoMatch) {
+    year = Number(isoMatch[1]);
+    month = Number(isoMatch[2]);
+    day = Number(isoMatch[3]);
+  } else {
+    return null;
+  }
+
+  const birthDate = new Date(year, month - 1, day, 12, 0, 0, 0);
+
+  // Bloqueia datas inválidas que o JS "corrige" automaticamente (ex.: 31/02).
+  if (
+    birthDate.getFullYear() !== year ||
+    birthDate.getMonth() !== month - 1 ||
+    birthDate.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return birthDate;
+}
+
 /**
  * Calcula a idade detalhada a partir de uma data (ISO ou BR).
  * Retorna: "37 anos, 5 meses e 11 dias"
@@ -10,19 +46,8 @@
 function formatAgeDetailed(dateStr) {
   if (!dateStr) return '—';
 
-  let isoDate = dateStr;
-  if (dateStr.includes('/')) {
-    const parts = dateStr.split('/');
-    if (parts.length === 3) {
-      isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-    }
-  }
-
-  // Validação básica para YYYY-MM-DD
-  if (!/^\d{4}-\d{2}-\d{2}/.test(isoDate)) return '—';
-
-  const birthDate = new Date(isoDate.substring(0, 10) + 'T12:00:00');
-  if (isNaN(birthDate.getTime())) return '—';
+  const birthDate = parseBirthDate(dateStr);
+  if (!birthDate) return '—';
 
   const today = new Date();
   today.setHours(12, 0, 0, 0);
@@ -35,7 +60,6 @@ function formatAgeDetailed(dateStr) {
 
   if (days < 0) {
     months -= 1;
-    // Pega o último dia do mês anterior
     const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
     days += prevMonth.getDate();
   }
@@ -61,10 +85,12 @@ function formatAgeDetailed(dateStr) {
 // Suporte para Node (CommonJS) e Browser (Global)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    formatAgeDetailed
+    formatAgeDetailed,
+    parseBirthDate
   };
 } else {
   window.AgeUtils = {
-    formatAgeDetailed
+    formatAgeDetailed,
+    parseBirthDate
   };
 }
