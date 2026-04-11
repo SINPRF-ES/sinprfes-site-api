@@ -124,4 +124,62 @@ describe('aniversariosAuto.service', () => {
     const sqlCalls = client.query.mock.calls.map(([sql]) => String(sql));
     expect(sqlCalls.some((sql) => sql.includes('INSERT INTO aniversarios'))).toBe(false);
   });
+
+  it('mesmo dia (rerun determinístico): mantém um único ATUAL sem arquivar/duplicar', async () => {
+    client.query
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [{ id: 'aniv-1', data_informe: '2026-04-11T12:00:00.000Z' }] }) // current
+      .mockResolvedValueOnce({ rows: [{ id: 'aniv-1' }] }) // today current
+      .mockResolvedValueOnce({ rows: [] }) // update
+      .mockResolvedValueOnce({ rows: [] }); // COMMIT
+
+    const resultado = await criarAniversarioAutomatico({
+      aniversariantes: [{ nome: 'Pessoa 1', tipo: 'FILIADO' }],
+      referenceDateISO: '2026-04-11',
+    });
+
+    expect(resultado).toEqual({
+      created: false,
+      updated: true,
+      id: 'aniv-1',
+      birthdaysCount: 1,
+    });
+
+    const sqlCalls = client.query.mock.calls.map(([sql]) => String(sql));
+    expect(sqlCalls.some((sql) => sql.includes('INSERT INTO aniversarios'))).toBe(false);
+    expect(sqlCalls.some((sql) => sql.includes("SET status_editorial = 'ARQUIVADA'"))).toBe(false);
+
+    const updateSql = sqlCalls.find((sql) => sql.includes('UPDATE aniversarios') && sql.includes('WHERE id = $5'));
+    expect(updateSql).toContain('is_editable = true');
+    expect(updateSql).not.toContain('archived_at');
+  });
+
+  it('borda de fuso (UTC próximo da meia-noite): não arquiva nem duplica no mesmo dia de referência', async () => {
+    client.query
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [{ id: 'aniv-1', data_informe: '2026-04-11T03:30:00.000Z' }] }) // current near boundary
+      .mockResolvedValueOnce({ rows: [{ id: 'aniv-1' }] }) // today current
+      .mockResolvedValueOnce({ rows: [] }) // update
+      .mockResolvedValueOnce({ rows: [] }); // COMMIT
+
+    const resultado = await criarAniversarioAutomatico({
+      aniversariantes: [{ nome: 'Pessoa 1', tipo: 'FILIADO' }],
+      referenceDateISO: '2026-04-11',
+    });
+
+    expect(resultado).toEqual({
+      created: false,
+      updated: true,
+      id: 'aniv-1',
+      birthdaysCount: 1,
+    });
+
+    const sqlCalls = client.query.mock.calls.map(([sql]) => String(sql));
+    expect(sqlCalls.some((sql) => sql.includes('INSERT INTO aniversarios'))).toBe(false);
+    expect(sqlCalls.some((sql) => sql.includes("SET status_editorial = 'ARQUIVADA'"))).toBe(false);
+
+    const updateSql = sqlCalls.find((sql) => sql.includes('UPDATE aniversarios') && sql.includes('WHERE id = $5'));
+    expect(updateSql).toContain('is_editable = true');
+    expect(updateSql).not.toContain('archived_at');
+  });
 });
