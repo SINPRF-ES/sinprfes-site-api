@@ -70,7 +70,10 @@ describe('birthdayCron - runBirthdayScan', () => {
       aniversariantes: expect.any(Array),
       referenceDate: '2026-04-08',
     });
-    expect(aniversariosAutoService.criarAniversarioAutomatico).toHaveBeenCalledWith({ aniversariantes: expect.any(Array) });
+    expect(aniversariosAutoService.criarAniversarioAutomatico).toHaveBeenCalledWith({
+      aniversariantes: expect.any(Array),
+      referenceDateISO: '2026-04-08',
+    });
     expect(mockClient.query).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE job_runs SET last_run_date = $1'),
       [todayStr, 'BIRTHDAY_SCAN']
@@ -149,7 +152,7 @@ describe('birthdayCron - runBirthdayScan', () => {
 
 
 
-  it('should not create aniversario automatico when there are no birthdays', async () => {
+  it('should sync editorial state even when there are no birthdays', async () => {
     const todayStr = new Date().toLocaleDateString('pt-BR', {
       timeZone: 'America/Sao_Paulo',
     });
@@ -171,6 +174,12 @@ describe('birthdayCron - runBirthdayScan', () => {
       failed: 0,
       skipped: 0,
     });
+    aniversariosAutoService.criarAniversarioAutomatico.mockResolvedValue({
+      created: false,
+      updated: false,
+      archivedPrevious: true,
+      reason: 'no_birthdays_today',
+    });
 
     await runBirthdayScan();
 
@@ -182,7 +191,10 @@ describe('birthdayCron - runBirthdayScan', () => {
       aniversariantes: [],
       referenceDate: '2026-04-08',
     });
-    expect(aniversariosAutoService.criarAniversarioAutomatico).not.toHaveBeenCalled();
+    expect(aniversariosAutoService.criarAniversarioAutomatico).toHaveBeenCalledWith({
+      aniversariantes: [],
+      referenceDateISO: '2026-04-08',
+    });
   });
 
   it('should keep summary email flow even when personalized sends fail individually', async () => {

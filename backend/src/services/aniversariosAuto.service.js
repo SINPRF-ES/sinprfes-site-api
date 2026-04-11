@@ -1,99 +1,160 @@
+const pool = require('../config/db');
 const log = require('../utils/log');
 const { buildBirthdayCard } = require('../templates/aniversarios/cardTemplate');
 
-function resolveApiBase() {
-  const fromEnv = process.env.INTERNAL_API_BASE_URL || process.env.API_INTERNAL_BASE_URL;
-  if (fromEnv) return fromEnv.replace(/\/$/, '');
-  const port = process.env.PORT || 3000;
-  return `http://127.0.0.1:${port}`;
+function getReferenceDateISO(date = new Date()) {
+  return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 }
 
-async function requestJson(url, options = {}) {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-  });
+function getReferenceDateTimestamp(referenceDateISO) {
+  return `${referenceDateISO}T12:00:00.000Z`;
+}
 
-  let data = null;
+async function archiveCurrentBirthdayEntry(client, id) {
+  if (!id) return 0;
+  const { rowCount } = await client.query(
+    `UPDATE aniversarios
+     SET status_editorial = 'ARQUIVADA',
+         is_editable = false,
+         archived_at = NOW(),
+         status = 'PUBLICADA',
+         published_at = COALESCE(published_at, NOW()),
+         sort_date = COALESCE(sort_date, published_at, created_at)
+     WHERE id = $1`,
+    [id]
+  );
+  return rowCount;
+}
+
+async function criarAniversarioAutomatico({ aniversariantes = [], referenceDateISO = getReferenceDateISO() }) {
+  const client = await pool.connect();
+  const birthdaysCount = Array.isArray(aniversariantes) ? aniversariantes.length : 0;
+  const referenceDate = getReferenceDateTimestamp(referenceDateISO);
+
   try {
-    data = await response.json();
-  } catch (_e) {
-    data = null;
+    await client.query('BEGIN');
+
+    const { rows: currentRows } = await client.query(
+      `SELECT id, data_informe
+       FROM aniversarios
+       WHERE status_editorial = 'ATUAL'
+       ORDER BY created_at DESC
+       LIMIT 1
+       FOR UPDATE`
+    );
+    const currentEntry = currentRows[0] || null;
+    const currentEntryDate = String(currentEntry?.data_informe || '').slice(0, 10) || null;
+
+    log.info('ANIVERSARIOS_AUTO_SYNC_START', {
+      referenceDateISO,
+      birthdaysCount,
+      currentEntryId: currentEntry?.id || null,
+      currentEntryDate,
+    });
+
+    if (birthdaysCount === 0) {
+      if (currentEntry) {
+        await archiveCurrentBirthdayEntry(client, currentEntry.id);
+        log.info('ANIVERSARIOS_AUTO_SYNC_ARCHIVED_STALE_CURRENT', {
+          referenceDateISO,
+          archivedId: currentEntry.id,
+          reason: 'no_birthdays_today',
+        });
+      } else {
+        log.info('ANIVERSARIOS_AUTO_SYNC_NOOP_EMPTY_DAY', { referenceDateISO });
+      }
+
+      await client.query('COMMIT');
+      return {
+        created: false,
+        updated: false,
+        archivedPrevious: Boolean(currentEntry),
+        reason: 'no_birthdays_today',
+      };
+    }
+
+    const birthdayCard = buildBirthdayCard({
+      aniversariantes,
+      date: new Date(`${referenceDateISO}T12:00:00-03:00`),
+    });
+
+    if (currentEntry && currentEntryDate !== referenceDateISO) {
+      await archiveCurrentBirthdayEntry(client, currentEntry.id);
+      log.info('ANIVERSARIOS_AUTO_SYNC_ARCHIVED_PREVIOUS_CURRENT', {
+        referenceDateISO,
+        archivedId: currentEntry.id,
+        archivedDate: currentEntryDate,
+      });
+    }
+
+    const { rows: todayRows } = await client.query(
+      `SELECT id
+       FROM aniversarios
+       WHERE status_editorial = 'ATUAL'
+         AND data_informe::date = $1::date
+       ORDER BY created_at DESC
+       LIMIT 1
+       FOR UPDATE`,
+      [referenceDateISO]
+    );
+
+    if (todayRows.length > 0) {
+      const todayId = todayRows[0].id;
+      await client.query(
+        `UPDATE aniversarios
+         SET titulo = $1,
+             subtitulo = $2,
+             conteudo = $3,
+             destaque = true,
+             status = 'PUBLICADA',
+             published_at = COALESCE(published_at, NOW()),
+             data_informe = $4,
+             sort_date = $4
+         WHERE id = $5`,
+        [birthdayCard.titulo, birthdayCard.subtitulo, birthdayCard.conteudo, referenceDate, todayId]
+      );
+
+      await client.query('COMMIT');
+      log.info('ANIVERSARIOS_AUTO_SYNC_UPDATED_CURRENT', {
+        referenceDateISO,
+        id: todayId,
+        birthdaysCount,
+      });
+      return { created: false, updated: true, id: todayId, birthdaysCount };
+    }
+
+    const { rows: createdRows } = await client.query(
+      `INSERT INTO aniversarios (
+         titulo, subtitulo, conteudo, status, autor_id, destaque, data_informe,
+         status_editorial, is_editable, published_at, sort_date
+       )
+       VALUES ($1, $2, $3, 'PUBLICADA', NULL, true, $4, 'ATUAL', true, NOW(), $4)
+       RETURNING id`,
+      [birthdayCard.titulo, birthdayCard.subtitulo, birthdayCard.conteudo, referenceDate]
+    );
+    const createdId = createdRows[0].id;
+
+    await client.query('COMMIT');
+    log.info('ANIVERSARIOS_AUTO_SYNC_CREATED_CURRENT', {
+      referenceDateISO,
+      id: createdId,
+      birthdaysCount,
+    });
+    return { created: true, updated: false, id: createdId, birthdaysCount };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    log.error('ANIVERSARIOS_AUTO_SYNC_FAILED', {
+      referenceDateISO,
+      birthdaysCount,
+      errorMessage: error.message,
+    });
+    throw error;
+  } finally {
+    client.release();
   }
-
-  if (!response.ok) {
-    const err = new Error(`HTTP ${response.status} em ${url}`);
-    err.status = response.status;
-    err.response = data;
-    throw err;
-  }
-
-  return data;
-}
-
-async function criarAniversarioAutomatico({ aniversariantes }) {
-  if (!Array.isArray(aniversariantes) || aniversariantes.length === 0) {
-    return { created: false, reason: 'empty' };
-  }
-
-  const token = process.env.INTERNAL_API_TOKEN;
-  if (!token) {
-    const missingTokenLogLevel = process.env.NODE_ENV === 'production' ? 'warn' : 'info';
-    log[missingTokenLogLevel]('ANIVERSARIOS_AUTO_TOKEN_MISSING');
-    return { created: false, reason: 'missing_token' };
-  }
-
-  const apiBase = resolveApiBase();
-  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-  };
-
-  const atuais = await requestJson(`${apiBase}/api/aniversarios?status_editorial=ATUAL`, {
-    method: 'GET',
-    headers,
-  });
-
-  const listaAtuais = Array.isArray(atuais) ? atuais : (atuais.items || atuais.data || []);
-  const jaExisteHoje = listaAtuais.some((item) => String(item.data_informe || '').slice(0, 10) === todayIso);
-
-  if (jaExisteHoje) {
-    return { created: false, reason: 'already_exists_today' };
-  }
-
-  const card = buildBirthdayCard({ aniversariantes, date: new Date() });
-  const dataInforme = `${todayIso}T12:00:00.000Z`;
-
-  const criado = await requestJson(`${apiBase}/api/aniversarios`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      titulo: card.titulo,
-      subtitulo: card.subtitulo,
-      conteudo: card.conteudo,
-      data_informe: dataInforme,
-      destaque: true,
-    }),
-  });
-
-  const createdItem = criado?.data || criado;
-  if (!createdItem?.id) {
-    log.warn('ANIVERSARIOS_AUTO_CREATED_WITHOUT_ID');
-    return { created: true, published: false };
-  }
-
-  await requestJson(`${apiBase}/api/aniversarios/${createdItem.id}/publicar`, {
-    method: 'POST',
-    headers,
-  });
-
-  return { created: true, published: true, id: createdItem.id };
 }
 
 module.exports = {
   criarAniversarioAutomatico,
+  getReferenceDateISO,
 };

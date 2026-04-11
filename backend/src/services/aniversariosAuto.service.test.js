@@ -1,7 +1,10 @@
+const pool = require('../config/db');
 const { criarAniversarioAutomatico } = require('./aniversariosAuto.service');
 
+jest.mock('../config/db');
 jest.mock('../utils/log', () => ({
-  warn: jest.fn(),
+  info: jest.fn(),
+  error: jest.fn(),
 }));
 
 jest.mock('../templates/aniversarios/cardTemplate', () => ({
@@ -13,65 +16,105 @@ jest.mock('../templates/aniversarios/cardTemplate', () => ({
 }));
 
 describe('aniversariosAuto.service', () => {
-  const originalEnv = process.env;
-  const originalFetch = global.fetch;
+  let client;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env = {
-      ...originalEnv,
-      INTERNAL_API_TOKEN: 'token-interno',
-      INTERNAL_API_BASE_URL: 'http://127.0.0.1:3000',
+    client = {
+      query: jest.fn(),
+      release: jest.fn(),
     };
-    global.fetch = jest.fn();
+    pool.connect.mockResolvedValue(client);
   });
 
-  afterAll(() => {
-    process.env = originalEnv;
-    global.fetch = originalFetch;
-  });
-
-  it('não cria aniversário quando já existe aniversário ATUAL para hoje', async () => {
-    const hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
-
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ items: [{ data_informe: `${hoje}T12:00:00.000Z` }] }),
-    });
+  it('cria item atual quando há aniversariantes e não existe atual no dia', async () => {
+    client.query
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [] }) // current
+      .mockResolvedValueOnce({ rows: [] }) // today current
+      .mockResolvedValueOnce({ rows: [{ id: 'aniv-1' }] }) // insert
+      .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
     const resultado = await criarAniversarioAutomatico({
       aniversariantes: [{ nome: 'Pessoa 1', tipo: 'FILIADO' }],
+      referenceDateISO: '2026-04-11',
     });
 
-    expect(resultado).toEqual({ created: false, reason: 'already_exists_today' });
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(resultado).toEqual({
+      created: true,
+      updated: false,
+      id: 'aniv-1',
+      birthdaysCount: 1,
+    });
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO aniversarios'),
+      expect.arrayContaining(['🎉 Aniversariantes do dia', 'Sub', 'Conteúdo', '2026-04-11T12:00:00.000Z'])
+    );
   });
 
-  it('cria e publica com data_informe canônica no timezone de São Paulo', async () => {
-    const hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
-
-    global.fetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ items: [] }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ id: 'aniv-1' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true }),
-      });
+  it('mesmo dia: atualiza item atual sem duplicar', async () => {
+    client.query
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [{ id: 'aniv-1', data_informe: '2026-04-11T12:00:00.000Z' }] }) // current
+      .mockResolvedValueOnce({ rows: [{ id: 'aniv-1' }] }) // today current
+      .mockResolvedValueOnce({ rows: [] }) // update
+      .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
     const resultado = await criarAniversarioAutomatico({
       aniversariantes: [{ nome: 'Pessoa 1', tipo: 'FILIADO' }],
+      referenceDateISO: '2026-04-11',
     });
 
-    expect(resultado).toEqual({ created: true, published: true, id: 'aniv-1' });
+    expect(resultado).toEqual({
+      created: false,
+      updated: true,
+      id: 'aniv-1',
+      birthdaysCount: 1,
+    });
+    const sqlCalls = client.query.mock.calls.map(([sql]) => String(sql));
+    expect(sqlCalls.some((sql) => sql.includes('INSERT INTO aniversarios'))).toBe(false);
+  });
 
-    const payloadCriacao = JSON.parse(global.fetch.mock.calls[1][1].body);
-    expect(payloadCriacao.data_informe).toBe(`${hoje}T12:00:00.000Z`);
-    expect(global.fetch.mock.calls[2][0]).toContain('/api/aniversarios/aniv-1/publicar');
+  it('novo dia com aniversariantes: arquiva atual antigo e cria novo atual', async () => {
+    client.query
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [{ id: 'aniv-old', data_informe: '2026-04-10T12:00:00.000Z' }] }) // current
+      .mockResolvedValueOnce({ rowCount: 1 }) // archive old
+      .mockResolvedValueOnce({ rows: [] }) // today current
+      .mockResolvedValueOnce({ rows: [{ id: 'aniv-new' }] }) // insert
+      .mockResolvedValueOnce({ rows: [] }); // COMMIT
+
+    const resultado = await criarAniversarioAutomatico({
+      aniversariantes: [{ nome: 'Pessoa 1', tipo: 'FILIADO' }],
+      referenceDateISO: '2026-04-11',
+    });
+
+    expect(resultado.id).toBe('aniv-new');
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining("SET status_editorial = 'ARQUIVADA'"),
+      ['aniv-old']
+    );
+  });
+
+  it('dia sem aniversariantes: arquiva atual existente e não cria novo', async () => {
+    client.query
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [{ id: 'aniv-old', data_informe: '2026-04-10T12:00:00.000Z' }] }) // current
+      .mockResolvedValueOnce({ rowCount: 1 }) // archive old
+      .mockResolvedValueOnce({ rows: [] }); // COMMIT
+
+    const resultado = await criarAniversarioAutomatico({
+      aniversariantes: [],
+      referenceDateISO: '2026-04-11',
+    });
+
+    expect(resultado).toEqual({
+      created: false,
+      updated: false,
+      archivedPrevious: true,
+      reason: 'no_birthdays_today',
+    });
+    const sqlCalls = client.query.mock.calls.map(([sql]) => String(sql));
+    expect(sqlCalls.some((sql) => sql.includes('INSERT INTO aniversarios'))).toBe(false);
   });
 });

@@ -74,12 +74,17 @@ async function runBirthdayScan() {
       referenceDate: birthdayGreetingsService.getReferenceDateISO(),
     });
 
-    if (count > 0) {
-      try {
-        await aniversariosAutoService.criarAniversarioAutomatico({ aniversariantes });
-      } catch (autoErr) {
-        log.error("Job.BirthdayScan.ErroAutoAniversario", autoErr);
-      }
+    try {
+      const autoEditorialResult = await aniversariosAutoService.criarAniversarioAutomatico({
+        aniversariantes,
+        referenceDateISO: birthdayGreetingsService.getReferenceDateISO(),
+      });
+      log.info("Job.BirthdayScan.AniversarioEditorialSincronizado", {
+        ...autoEditorialResult,
+        birthdaysCount: count,
+      });
+    } catch (autoErr) {
+      log.error("Job.BirthdayScan.ErroAutoAniversario", autoErr);
     }
 
     await client.query(
