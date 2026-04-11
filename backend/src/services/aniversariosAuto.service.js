@@ -43,7 +43,9 @@ async function criarAniversarioAutomatico({ aniversariantes = [], referenceDateI
        FOR UPDATE`
     );
     const currentEntry = currentRows[0] || null;
-    const currentEntryDate = String(currentEntry?.data_informe || '').slice(0, 10) || null;
+    const currentEntryDate = currentEntry?.data_informe
+      ? new Date(currentEntry.data_informe).toISOString().slice(0, 10)
+      : null;
 
     log.info('ANIVERSARIOS_AUTO_SYNC_START', {
       referenceDateISO,
@@ -109,7 +111,8 @@ async function criarAniversarioAutomatico({ aniversariantes = [], referenceDateI
              status = 'PUBLICADA',
              published_at = COALESCE(published_at, NOW()),
              data_informe = $4,
-             sort_date = $4
+             sort_date = $4,
+             is_editable = true
          WHERE id = $5`,
         [birthdayCard.titulo, birthdayCard.subtitulo, birthdayCard.conteudo, referenceDate, todayId]
       );

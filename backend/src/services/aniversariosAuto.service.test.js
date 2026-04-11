@@ -73,6 +73,13 @@ describe('aniversariosAuto.service', () => {
     });
     const sqlCalls = client.query.mock.calls.map(([sql]) => String(sql));
     expect(sqlCalls.some((sql) => sql.includes('INSERT INTO aniversarios'))).toBe(false);
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE aniversarios'),
+      expect.arrayContaining([expect.anything(), expect.anything(), expect.anything(), expect.anything(), 'aniv-1'])
+    );
+    // Verificar se is_editable = true está no SQL do UPDATE
+    const updateCall = client.query.mock.calls.find(([sql]) => String(sql).includes('UPDATE aniversarios') && String(sql).includes('is_editable = true'));
+    expect(updateCall).toBeDefined();
   });
 
   it('novo dia com aniversariantes: arquiva atual antigo e cria novo atual', async () => {
