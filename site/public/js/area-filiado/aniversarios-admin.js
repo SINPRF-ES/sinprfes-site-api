@@ -192,7 +192,11 @@
     `;
     const md = document.querySelector("#modal-generic-corpo .aniversario-markdown");
     if (window.InformesRenderer?.mountRenderedMarkdown) {
-      window.InformesRenderer.mountRenderedMarkdown(md, data.conteudo || "", { allowRichHtml: true });
+      window.InformesRenderer.mountRenderedMarkdown(md, data.conteudo || "", {
+        allowRichHtml: true,
+        variant: 'birthdayCard',
+        title: data.titulo || '',
+      });
     }
     modal.style.display = "flex";
   }
