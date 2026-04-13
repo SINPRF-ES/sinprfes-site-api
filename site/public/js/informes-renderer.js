@@ -23,19 +23,38 @@
     });
   }
 
-  function sanitizeHtml(html) {
+  function sanitizeHtml(html, options = {}) {
+    const allowRichHtml = options && options.allowRichHtml === true;
     if (!global.DOMPurify) return html;
 
+    const baseConfig = {
+      FORBID_TAGS: ['style', 'script', 'iframe', 'object', 'embed'],
+      FORBID_ATTR: ['onerror', 'onload', 'onclick'],
+      ALLOW_UNKNOWN_PROTOCOLS: false,
+    };
+
+    if (allowRichHtml) {
+      return global.DOMPurify.sanitize(html, {
+        ...baseConfig,
+        ALLOWED_TAGS: [
+          'p', 'br', 'strong', 'em', 's', 'blockquote',
+          'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+          'ul', 'ol', 'li', 'a', 'code', 'pre', 'hr',
+          'div', 'span', 'img'
+        ],
+        ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'src', 'alt', 'style'],
+      });
+    }
+
     return global.DOMPurify.sanitize(html, {
+      ...baseConfig,
       ALLOWED_TAGS: [
         'p', 'br', 'strong', 'em', 's', 'blockquote',
         'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'ul', 'ol', 'li', 'a', 'code', 'pre', 'hr'
       ],
       ALLOWED_ATTR: ['href', 'title', 'target', 'rel'],
-      FORBID_TAGS: ['style', 'script', 'iframe', 'object', 'embed'],
-      FORBID_ATTR: ['onerror', 'onload', 'onclick', 'style'],
-      ALLOW_UNKNOWN_PROTOCOLS: false,
+      FORBID_ATTR: [...baseConfig.FORBID_ATTR, 'style'],
     });
   }
 
@@ -54,30 +73,42 @@
     });
   }
 
-  function renderInformesMarkdown(conteudo) {
+  function renderInformesMarkdown(conteudo, options = {}) {
     const markdown = getMarkdownRenderer();
+    const allowRichHtml = options && options.allowRichHtml === true;
     if (!markdown) {
       return `<p>${escapeHTML(conteudo || '')}</p>`;
     }
 
-    const rendered = markdown.render(String(conteudo || ''));
-    return sanitizeHtml(rendered);
+    const source = String(conteudo || '');
+    if (allowRichHtml) {
+      const markdownWithHtml = global.markdownit({
+        html: true,
+        linkify: true,
+        typographer: false,
+        breaks: true,
+      });
+      return sanitizeHtml(markdownWithHtml.render(source), { allowRichHtml: true });
+    }
+
+    const rendered = markdown.render(source);
+    return sanitizeHtml(rendered, options);
   }
 
 
-  function renderInformesPlainText(conteudo) {
+  function renderInformesPlainText(conteudo, options = {}) {
     const markdown = getMarkdownRenderer();
     if (!markdown) return String(conteudo || '').replace(/\s+/g, ' ').trim();
 
-    const rendered = markdown.render(String(conteudo || ''));
+    const rendered = renderInformesMarkdown(conteudo, options);
     const tmp = document.createElement('div');
-    tmp.innerHTML = sanitizeHtml(rendered);
+    tmp.innerHTML = sanitizeHtml(rendered, options);
     return (tmp.textContent || '').replace(/\s+/g, ' ').trim();
   }
 
-  function mountRenderedMarkdown(container, conteudo) {
+  function mountRenderedMarkdown(container, conteudo, options = {}) {
     if (!container) return;
-    container.innerHTML = renderInformesMarkdown(conteudo);
+    container.innerHTML = renderInformesMarkdown(conteudo, options);
     enforceSafeLinks(container);
   }
 
