@@ -20,6 +20,9 @@ const BIRTHDAY_BR_PREFIX_REGEX = /^\s*BR\s*[:\-|]?\s*/i;
 
 const normalizeBirthdayLine = (line: string): string => {
   return String(line || '')
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/\*\*/g, '') // Remove markdown bold
+    .replace(/#/g, '') // Remove markdown hashes
     .replace(BIRTHDAY_BR_PREFIX_REGEX, '')
     .replace(BIRTHDAY_EMOJI_PREFIX_REGEX, '')
     .trim();
@@ -35,36 +38,44 @@ const parseBirthdayContent = (conteudo?: string | null): { pessoas: BirthdayPers
     .replace(/\r\n/g, '\n')
     .split('\n')
     .map((line) => normalizeBirthdayLine(line))
-    .filter(Boolean);
+    .filter((line) => line && !/^[\s\-–—•*·=_]*$/.test(line)); // Filter empty or separator-only lines
 
   const pessoas: BirthdayPerson[] = [];
   let footer = '';
 
-  const skipHeading = (line: string) => /^(lista de aniversariantes|aniversariantes|feliz anivers[aá]rio!?|anivers[aá]rio)$/i.test(line);
+  const skipHeading = (line: string) =>
+    /^(lista de aniversariantes|aniversariantes|feliz anivers[aá]rio!?|anivers[aá]rio|sinprf\/es celebra com alegria este dia especial\.?)$/i.test(line);
 
   for (let i = 0; i < lines.length; i += 1) {
     const rawLine = lines[i].replace(/^[•\-*]\s*/, '').trim();
     if (!rawLine || skipHeading(rawLine)) continue;
 
-    const splitWithDependent = rawLine.split(/\s*[·|-]\s*(?=Dependente de\s+)/i);
+    if (rawLine.startsWith('>') || (i === lines.length - 1 && i > 0 && !/anivers[aá]ri/i.test(rawLine) && rawLine.length > 20 && !/(Dependente de|Filiado\(a\))/i.test(rawLine))) {
+      footer = rawLine.replace(/^>\s*/, '').trim();
+      continue;
+    }
+
+    const splitWithDependent = rawLine.split(/\s*[·|-]\s*(?=(?:Dependente de|Filiado\(a\))\s*)/i);
     if (splitWithDependent.length > 1) {
       pessoas.push({ nome: splitWithDependent[0].trim(), subline: splitWithDependent[1].trim() });
       continue;
     }
 
-    if (/^Dependente de\s+/i.test(rawLine) && pessoas.length > 0) {
-      if (!pessoas[pessoas.length - 1].subline) pessoas[pessoas.length - 1].subline = rawLine;
-      continue;
+    if (/^(?:Dependente de|Filiado\(a\))\s*/i.test(rawLine) && pessoas.length > 0) {
+      if (!pessoas[pessoas.length - 1].subline) {
+        pessoas[pessoas.length - 1].subline = rawLine;
+        continue;
+      }
     }
 
     const nextLine = lines[i + 1] ? lines[i + 1].replace(/^[•\-*]\s*/, '').trim() : '';
-    if (/^Dependente de\s+/i.test(nextLine)) {
+    if (/^(?:Dependente de|Filiado\(a\))\s*/i.test(nextLine)) {
       pessoas.push({ nome: rawLine, subline: nextLine });
       i += 1;
       continue;
     }
 
-    if (!/anivers[aá]ri/i.test(rawLine) && rawLine.length <= 110 && pessoas.length > 0) {
+    if (!/anivers[aá]ri/i.test(rawLine) && rawLine.length <= 110 && pessoas.length > 0 && i === lines.length - 1 && !/(Dependente de|Filiado\(a\))/i.test(rawLine)) {
       footer = rawLine;
       continue;
     }
