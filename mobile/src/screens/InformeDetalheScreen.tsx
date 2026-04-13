@@ -10,6 +10,71 @@ import SafeScreen from '../components/SafeScreen';
 
 const { width } = Dimensions.get('window');
 
+type BirthdayPerson = {
+  nome: string;
+  subline?: string;
+};
+
+const BIRTHDAY_EMOJI_PREFIX_REGEX = /^[\s\-–—•*·]*[🎉🎂🎈✨🥳🎊🎁🍰🎆]+\s*/u;
+const BIRTHDAY_BR_PREFIX_REGEX = /^\s*BR\s*[:\-|]?\s*/i;
+
+const normalizeBirthdayLine = (line: string): string => {
+  return String(line || '')
+    .replace(BIRTHDAY_BR_PREFIX_REGEX, '')
+    .replace(BIRTHDAY_EMOJI_PREFIX_REGEX, '')
+    .trim();
+};
+
+const sanitizeBirthdayHeading = (value?: string | null): string => {
+  const cleaned = normalizeBirthdayLine(String(value || '').replace(/[🎉🎂🎈✨🥳🎊🎁🍰🎆]/gu, '').trim());
+  return cleaned || 'Aniversariantes do dia';
+};
+
+const parseBirthdayContent = (conteudo?: string | null): { pessoas: BirthdayPerson[]; footer: string } => {
+  const lines = String(conteudo || '')
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((line) => normalizeBirthdayLine(line))
+    .filter(Boolean);
+
+  const pessoas: BirthdayPerson[] = [];
+  let footer = '';
+
+  const skipHeading = (line: string) => /^(lista de aniversariantes|aniversariantes|feliz anivers[aá]rio!?|anivers[aá]rio)$/i.test(line);
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const rawLine = lines[i].replace(/^[•\-*]\s*/, '').trim();
+    if (!rawLine || skipHeading(rawLine)) continue;
+
+    const splitWithDependent = rawLine.split(/\s*[·|-]\s*(?=Dependente de\s+)/i);
+    if (splitWithDependent.length > 1) {
+      pessoas.push({ nome: splitWithDependent[0].trim(), subline: splitWithDependent[1].trim() });
+      continue;
+    }
+
+    if (/^Dependente de\s+/i.test(rawLine) && pessoas.length > 0) {
+      if (!pessoas[pessoas.length - 1].subline) pessoas[pessoas.length - 1].subline = rawLine;
+      continue;
+    }
+
+    const nextLine = lines[i + 1] ? lines[i + 1].replace(/^[•\-*]\s*/, '').trim() : '';
+    if (/^Dependente de\s+/i.test(nextLine)) {
+      pessoas.push({ nome: rawLine, subline: nextLine });
+      i += 1;
+      continue;
+    }
+
+    if (!/anivers[aá]ri/i.test(rawLine) && rawLine.length <= 110 && pessoas.length > 0) {
+      footer = rawLine;
+      continue;
+    }
+
+    pessoas.push({ nome: rawLine });
+  }
+
+  return { pessoas, footer };
+};
+
 export default function InformeDetalheScreen({ route, navigation }: any) {
   const { newsId, publicRef, module = 'informes' } = route.params || {};
   const isAniversarios = module === 'aniversarios';
@@ -61,6 +126,8 @@ export default function InformeDetalheScreen({ route, navigation }: any) {
   const coverUrl = informe.capa_url;
   const ehGestaoInformes = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
   const canEdit = ehGestaoInformes && informe.is_editable && informe.status_editorial !== 'ARQUIVADA';
+  const birthdayData = isAniversarios ? parseBirthdayContent(informe.conteudo) : null;
+  const birthdayTitle = isAniversarios ? sanitizeBirthdayHeading(informe.titulo) : '';
 
   return (
     <SafeScreen style={styles.container}>
@@ -90,13 +157,40 @@ export default function InformeDetalheScreen({ route, navigation }: any) {
             )}
           </View>
 
-          <Text style={styles.title}>{informe.titulo}</Text>
+          {isAniversarios ? (
+            <View style={styles.birthdayCard}>
+              <View style={styles.birthdayHeader}>
+                <Text style={styles.birthdayHeaderIcon}>🎉</Text>
+                <Text style={styles.birthdayTitle}>{birthdayTitle}</Text>
+              </View>
 
-          <View style={styles.markdownContainer}>
-            <Markdown style={markdownStyles as any}>
-              {informe.conteudo}
-            </Markdown>
-          </View>
+              <View style={styles.birthdayHighlight}>
+                <Text style={styles.birthdayHighlightTitle}>🎂 Feliz aniversário!</Text>
+                <Text style={styles.birthdayHighlightText}>SINPRF/ES celebra com alegria este dia especial.</Text>
+              </View>
+
+              <View style={styles.birthdayListSection}>
+                <Text style={styles.birthdaySectionTitle}>Lista de aniversariantes</Text>
+                {birthdayData?.pessoas?.map((pessoa, index) => (
+                  <View key={`${pessoa.nome}-${index}`} style={styles.birthdayListItem}>
+                    <Text style={styles.birthdayPersonName}>{pessoa.nome}</Text>
+                    {!!pessoa.subline && <Text style={styles.birthdayPersonSubline}>{pessoa.subline}</Text>}
+                  </View>
+                ))}
+              </View>
+
+              {!!birthdayData?.footer && <Text style={styles.birthdayFooter}>{birthdayData.footer}</Text>}
+            </View>
+          ) : (
+            <>
+              <Text style={styles.title}>{informe.titulo}</Text>
+              <View style={styles.markdownContainer}>
+                <Markdown style={markdownStyles as any}>
+                  {informe.conteudo}
+                </Markdown>
+              </View>
+            </>
+          )}
 
           {informe.midias && informe.midias.length > 0 && (
             <View style={styles.gallerySection}>
@@ -195,6 +289,79 @@ const styles = StyleSheet.create({
   },
   markdownContainer: {
     marginBottom: 30,
+  },
+  birthdayCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    padding: 16,
+    marginBottom: 24,
+  },
+  birthdayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  birthdayHeaderIcon: {
+    fontSize: 16,
+  },
+  birthdayTitle: {
+    flex: 1,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1f2937',
+    lineHeight: 30,
+  },
+  birthdayHighlight: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 14,
+    marginBottom: 16,
+  },
+  birthdayHighlightTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 6,
+  },
+  birthdayHighlightText: {
+    fontSize: 15,
+    color: '#475569',
+    lineHeight: 22,
+  },
+  birthdayListSection: {
+    marginBottom: 10,
+  },
+  birthdaySectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 10,
+  },
+  birthdayListItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  birthdayPersonName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  birthdayPersonSubline: {
+    marginTop: 2,
+    fontSize: 14,
+    color: '#64748b',
+  },
+  birthdayFooter: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6b7280',
+    fontStyle: 'italic',
   },
   gallerySection: {
     marginTop: 20,
