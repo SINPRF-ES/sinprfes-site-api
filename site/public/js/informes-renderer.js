@@ -81,6 +81,13 @@
     }
 
     const source = String(conteudo || '');
+    const normalizedSource = allowRichHtml
+      ? source
+        .replace(/\\r\\n/g, '\n')
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '\n')
+      : source;
+
     if (allowRichHtml) {
       const markdownWithHtml = global.markdownit({
         html: true,
@@ -88,10 +95,10 @@
         typographer: false,
         breaks: true,
       });
-      return sanitizeHtml(markdownWithHtml.render(source), { allowRichHtml: true });
+      return sanitizeHtml(markdownWithHtml.render(normalizedSource), { allowRichHtml: true });
     }
 
-    const rendered = markdown.render(source);
+    const rendered = markdown.render(normalizedSource);
     return sanitizeHtml(rendered, options);
   }
 
