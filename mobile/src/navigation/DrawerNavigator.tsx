@@ -153,7 +153,7 @@ export default function DrawerNavigator() {
         }}
       />
 
-      {!isComunicador && (
+      {ehGestaoUsuario && !isComunicador && (
       <Drawer.Screen
         name="Jogos2026"
         component={JogosScreen}

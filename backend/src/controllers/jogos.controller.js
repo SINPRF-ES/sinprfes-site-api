@@ -37,197 +37,24 @@ function getUserNome(req) {
  */
 exports.registrarInscricao = async (req, res) => {
   const requestId = req.requestId || uuidv4();
-  const atorId = req.user?.id;
-
-  try {
-    const userId = atorId || getUserId(req);
-    const filiadoNome = getUserNome(req);
-
-    if (!userId) {
-      log.error("JogosInscricaoErroUserId", { user: req?.user, requestId });
-      return res.status(401).json({ success: false, error: "Usuário não autenticado.", requestId });
-    }
-
-    const { modalidades, observacoes, familiares, qtd_familiares, sexo } = req.body || {};
-
-    if (!modalidades || modalidades.length === 0) {
-      return res.status(400).json({
-        error: "Selecione pelo menos uma modalidade de interesse.",
-      });
-    }
-
-    const modalidadesTexto = Array.isArray(modalidades) ? modalidades : [];
-    const obsLimpa = String(observacoes || "").trim();
-    const familiaresLimpo = String(familiares || "").trim();
-    const qtdFamiliaresInt = parseInt(qtd_familiares, 10) || 0;
-    const sexoLimpo = String(sexo || "").trim();
-
-    const query = `
-      INSERT INTO pre_inscricoes_jogos (
-        filiado_id, nome_filiado, modalidades, observacoes, familiares, qtd_familiares, sexo, data_inscricao
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-      ON CONFLICT (filiado_id) DO UPDATE SET
-        modalidades = EXCLUDED.modalidades,
-        observacoes = EXCLUDED.observacoes,
-        familiares = EXCLUDED.familiares,
-        qtd_familiares = EXCLUDED.qtd_familiares,
-        sexo = EXCLUDED.sexo,
-        data_inscricao = NOW()
-      RETURNING *
-    `;
-
-    const { rows } = await pool.query(query, [
-      userId,
-      filiadoNome,
-      modalidadesTexto,
-      obsLimpa,
-      familiaresLimpo,
-      qtdFamiliaresInt,
-      sexoLimpo,
-    ]);
-
-    const inscricao = rows[0];
-
-    log.info("JogosInscricao", { userId, modalidades: modalidadesTexto });
-
-    // E-mail de confirmação (não bloqueia fluxo)
-    try {
-      const { rows: fRows } = await pool.query(
-        `
-        SELECT id, nome, email1, email2, telefone1, data_nascimento
-        FROM filiados
-        WHERE id = $1
-        LIMIT 1
-      `,
-        [userId]
-      );
-
-      const filiado = fRows && fRows[0];
-
-      // Log diagnóstico (remova depois se quiser)
-      log.info("JogosEmailConfirmacaoDebug", {
-        userId,
-        filiadoEncontrado: !!filiado,
-        email1: filiado?.email1 || null,
-        email2: filiado?.email2 || null,
-      });
-
-      if (filiado && (filiado.email1 || filiado.email2)) {
-        await enviarEmailConfirmacaoInscricaoJogos({
-          filiado,
-          inscricao: {
-            modalidades: inscricao?.modalidades ?? modalidadesTexto,
-            observacoes: inscricao?.observacoes ?? obsLimpa,
-            familiares: inscricao?.familiares ?? familiaresLimpo,
-            qtd_familiares: inscricao?.qtd_familiares ?? qtdFamiliaresInt,
-            sexo: inscricao?.sexo ?? sexoLimpo,
-            data_inscricao: inscricao?.data_inscricao ?? null,
-          },
-        });
-      } else {
-        log.warn("EmailJogosConfirmacao: filiado sem email1/email2.", {
-          filiadoId: filiado?.id,
-          userId,
-        });
-      }
-    } catch (emailErr) {
-      log.error("EmailJogosConfirmacaoErro", emailErr);
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: Textos?.SUCESSO?.INSCRICAO_JOGOS_SUCESSO || "Pré-inscrição registrada com sucesso.",
-      inscricao,
-      requestId
-    });
-  } catch (err) {
-    return handleDbError(err, res, requestId, Textos?.ERROS_INTERNOS?.ATUALIZAR_DADOS || "Erro interno ao registrar pré-inscrição.");
-  }
+  return res.status(410).json({
+    success: false,
+    error: "As inscrições dos Jogos de Integração 2026 foram encerradas.",
+    requestId,
+  });
 };
 
 /**
  * Cancela a pré-inscrição do filiado.
- * - Captura a inscrição antes do DELETE para poder enviar e-mail com contexto.
- * - Dispara e-mail de cancelamento (best-effort).
+ * Fluxo legado encerrado para preservar os participantes já registrados.
  */
 exports.cancelarInscricao = async (req, res) => {
   const requestId = req.requestId || uuidv4();
-  const atorId = req.user?.id;
-
-  try {
-    const userId = atorId || getUserId(req);
-
-    if (!userId) {
-      log.error("JogosCancelarErroUserId", { user: req?.user, requestId });
-      return res.status(401).json({ success: false, error: "Usuário não autenticado.", requestId });
-    }
-
-    // Captura dados para e-mail antes de apagar
-    let snapshot = null;
-    try {
-      const { rows } = await pool.query(
-        `
-        SELECT
-          pi.*,
-          f.id as filiado_id,
-          f.nome as filiado_nome,
-          f.email1,
-          f.email2,
-          f.telefone1,
-          f.data_nascimento
-        FROM pre_inscricoes_jogos pi
-        JOIN filiados f ON pi.filiado_id = f.id
-        WHERE pi.filiado_id = $1
-        LIMIT 1
-      `,
-        [userId]
-      );
-      snapshot = rows && rows[0] ? rows[0] : null;
-    } catch (e) {
-      // não bloqueia cancelamento
-      log.error("JogosCancelarSnapshotErro", e);
-    }
-
-    const query = `DELETE FROM pre_inscricoes_jogos WHERE filiado_id = $1`;
-    await pool.query(query, [userId]);
-
-    log.info("JogosInscricaoCancelada", { userId });
-
-    // E-mail de cancelamento (não bloqueia fluxo)
-    try {
-      if (snapshot && (snapshot.email1 || snapshot.email2)) {
-        await enviarEmailCancelamentoInscricaoJogos({
-          filiado: {
-            id: snapshot.filiado_id,
-            nome: snapshot.filiado_nome || snapshot.nome_filiado,
-            email1: snapshot.email1,
-            email2: snapshot.email2,
-            telefone1: snapshot.telefone1,
-            data_nascimento: snapshot.data_nascimento,
-          },
-          inscricao: {
-            modalidades: snapshot.modalidades,
-            observacoes: snapshot.observacoes,
-            familiares: snapshot.familiares,
-            qtd_familiares: snapshot.qtd_familiares,
-            sexo: snapshot.sexo,
-            data_inscricao: snapshot.data_inscricao,
-          },
-        });
-      } else {
-        log.warn("EmailJogosCancelamento: filiado sem email1/email2.", {
-          filiadoId: snapshot?.filiado_id,
-          userId,
-        });
-      }
-    } catch (emailErr) {
-      log.error("EmailJogosCancelamentoErro", emailErr);
-    }
-
-    return res.json({ success: true, message: "Sua pré-inscrição foi cancelada com sucesso.", requestId });
-  } catch (err) {
-    return handleDbError(err, res, requestId, "Erro ao cancelar inscrição.");
-  }
+  return res.status(410).json({
+    success: false,
+    error: "As inscrições dos Jogos de Integração 2026 foram encerradas.",
+    requestId,
+  });
 };
 
 /**

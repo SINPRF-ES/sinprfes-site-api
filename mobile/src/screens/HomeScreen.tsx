@@ -1,14 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { DrawerScreenProps } from '@react-navigation/drawer';
 
 import SafeScreen from '../components/SafeScreen';
 import MemberCard from '../components/MemberCard';
-import JogosBanner from '../components/JogosBanner';
 
-import { ENABLE_JOGOS } from '../config/features';
 import { useAuth } from '../hooks/useAuth';
 import { logNavigation } from '../infra/logger';
 import { isDiretoria, isGestao } from '../utils/filiadoUtils';
@@ -39,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Assembleias', subtitle: 'Votações e sessões', icon: 'vote-outline', screen: 'Votacao', hiddenForComunicador: true },
   { label: 'Publicações', subtitle: 'Biblioteca e Atos', icon: 'book-open-variant', screen: 'Publicacoes', hiddenForComunicador: true },
   { label: 'Repasse', subtitle: 'Apoio e alocações', icon: 'swap-horizontal', screen: 'Repasse', hiddenForComunicador: true },
+  { label: 'Jogos 2026', subtitle: 'Participantes e relatório', icon: 'trophy-outline', screen: 'Jogos2026', requireGestao: true, hiddenForComunicador: true },
   { label: 'Relatórios', subtitle: 'Dossiês e PDFs', icon: 'chart-bar', screen: 'Relatorios', requireGestao: true },
   { label: 'Estatísticas', subtitle: 'Acessos do site', icon: 'chart-line', screen: 'Estatisticas', requireGestao: true },
   { label: 'Consulta Processual', subtitle: 'PJe e Tribunais', icon: 'scale-balance', screen: 'ConsultaProcessual', hiddenForComunicador: true },
@@ -61,8 +60,6 @@ export default function HomeScreen({ navigation }: Props) {
       && !(isComunicador && i.hiddenForComunicador)
   );
 
-  const primeiroNome = String(usuario?.nome || 'Filiado').trim().split(' ')[0];
-
   return (
     <SafeScreen style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -71,13 +68,6 @@ export default function HomeScreen({ navigation }: Props) {
         <View style={styles.memberCardContainer}>
           <MemberCard member={usuario} variant="default" />
         </View>
-
-        {ENABLE_JOGOS && !isComunicador && (
-          <View style={styles.banners}>
-            <JogosBanner />
-          </View>
-        )}
-
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Ações rápidas</Text>
         </View>

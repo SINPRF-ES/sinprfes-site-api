@@ -10,7 +10,7 @@
         const grid = document.getElementById("home-actions-grid");
         if (!grid) return;
 
-        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO"].includes(perfil);
+        const ehGestao = ["ADMIN", "DIRETORIA", "FUNCIONARIO", "ORGANIZADOR"].includes(perfil);
 
         const isComunicador = perfil === 'COMUNICADOR';
 
@@ -28,12 +28,12 @@
         if (!isComunicador) {
             actions.splice(1, 0, { label: 'Listar Filiados', subtitle: 'Consulte o quadro', icon: '👥', target: 'sec-filiados' });
             actions.push({ label: 'Assembleias', subtitle: 'Votações e sessões', icon: '🗳️', target: 'sec-assembleias' });
-            actions.push({ label: 'Jogos 2026', subtitle: 'Inscrição e info', icon: '🏆', target: 'sec-jogos' });
             actions.push({ label: 'Publicações', subtitle: 'Biblioteca e Atos', icon: '📚', target: 'sec-publicacoes' });
             actions.push({ label: 'Repasse', subtitle: 'Apoio e alocações', icon: '💱', target: 'sec-repasse' });
         }
 
         if (ehGestao) {
+            actions.push({ label: 'Jogos 2026', subtitle: 'Participantes e relatório', icon: '🏆', target: 'sec-jogos' });
             actions.push({ label: 'Relatórios', subtitle: 'Dossiês e PDFs', icon: '📊', target: 'sec-relatorios' });
             actions.push({ label: 'Estatísticas', subtitle: 'Acessos do site', icon: '📈', target: 'sec-estatisticas' });
             actions.push({ label: 'Consulta Processual', subtitle: 'PJe e Tribunais', icon: '⚖️', target: 'sec-consulta-processual' });

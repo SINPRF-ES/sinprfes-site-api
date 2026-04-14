@@ -22,7 +22,6 @@
       return;
     }
 
-    const { obterUserInfo, exibirAlertaFlutuante } = window.Utils || {};
     const { configurarNavegacao, configurarDrawerMobile } = window.Navegacao || {};
     const { renderSidebarNav, syncVisibility } = window.AreaFiliadoNavigation || {};
     const { inicializarHome } = window.Home || {};
@@ -115,7 +114,15 @@
         else if (abaAlvo === "sec-meus-dados" && carregarMeusDados) carregarMeusDados();
         else if (abaAlvo === "sec-filiados" && inicializarFiliados) inicializarFiliados(perfil);
         else if (abaAlvo === "sec-ressarcimento" && inicializarRessarcimento) inicializarRessarcimento();
-        else if (abaAlvo === "sec-jogos" && inicializarJogos) inicializarJogos(perfil);
+        else if (abaAlvo === "sec-jogos" && inicializarJogos) {
+          const perfilJogos = (perfil || '').toUpperCase();
+          const podeVisualizarJogos = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'ORGANIZADOR'].includes(perfilJogos);
+          if (podeVisualizarJogos) inicializarJogos(perfil);
+          else {
+            const btnHome = document.getElementById('nav-home');
+            if (btnHome) btnHome.click();
+          }
+        }
         else if (abaAlvo === "sec-publicacoes" && inicializarPublicacoes) inicializarPublicacoes(null, { perfil });
         else if (abaAlvo === "sec-assembleias" && inicializarAssembleias) inicializarAssembleias(perfil);
         else if (abaAlvo === "sec-informes") {
@@ -275,6 +282,5 @@
       if (btnAtivo) btnAtivo.click();
     }
 
-    if (exibirAlertaFlutuante) exibirAlertaFlutuante();
   });
 })();
