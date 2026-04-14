@@ -90,6 +90,7 @@ const CustomDrawerContent = (props) => {
     .filter((item) => routeSet.has(item.routeName))
     .filter((item) => {
       if (item.routeName === 'NotificacoesPush' || item.routeName === 'CriarFiliado') return ehGestao;
+      if (item.routeName === 'Jogos2026') return ehGestao;
       if (item.routeName === 'Logs') return ehDiretoria;
       return true;
     })
