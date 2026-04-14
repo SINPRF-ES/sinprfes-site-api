@@ -228,12 +228,6 @@
             <ul style="margin:0; padding:0;">${listHtml}</ul>
           </section>
 
-          ${parsed.footer ? `
-            <footer style="margin-top:20px; padding-top:16px; border-top:1px dashed #cbd5e1; color:#64748b; font-size:0.85rem; font-style:italic; line-height:1.5; display:flex; align-items:flex-start; gap:8px;">
-              <span style="font-style:normal; opacity:0.7;">ℹ️</span>
-              <span>${escapeHTML(parsed.footer)}</span>
-            </footer>
-          ` : ''}
         </div>
       </article>
     `;
