@@ -40,7 +40,7 @@
           'p', 'br', 'strong', 'em', 's', 'blockquote',
           'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
           'ul', 'ol', 'li', 'a', 'code', 'pre', 'hr',
-          'div', 'span', 'img'
+          'div', 'span', 'img', 'article', 'header', 'section', 'footer', 'h2', 'h3'
         ],
         ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'src', 'alt', 'style'],
       });
@@ -186,28 +186,55 @@
   function renderBirthdayCard(conteudo, options = {}) {
     const parsed = parseBirthdayContent(conteudo);
     const heading = sanitizeBirthdayHeading(options.title || '');
+    const brasaoUrl = '/img/Logo_ES_semfundo.png';
+
     const listHtml = parsed.pessoas.map((item) => `
-      <li style="padding:10px 0; border-bottom:1px solid #f1f5f9; list-style:disc; margin-left:18px;">
-        <div style="font-weight:600; color:#1f2937;">${escapeHTML(item.nome)}</div>
-        ${item.subline ? `<div style="margin-top:2px; color:#64748b; font-size:0.94rem;">${escapeHTML(item.subline)}</div>` : ''}
+      <li style="padding:12px 0; border-bottom:1px solid rgba(31, 111, 178, 0.08); list-style:none; display:flex; align-items:flex-start; gap:10px;">
+        <span style="font-size:1.1rem; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🎈</span>
+        <div>
+          <div style="font-weight:700; color:#1f6fb2; font-size:1.05rem;">${escapeHTML(item.nome)}</div>
+          ${item.subline ? `<div style="margin-top:2px; color:#475569; font-size:0.9rem; font-weight:500;">${escapeHTML(item.subline)}</div>` : ''}
+        </div>
       </li>
     `).join('');
 
     return `
-      <article style="background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:16px;">
-        <header style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
-          <span aria-hidden="true" style="font-size:1rem;">🎉</span>
-          <h2 style="margin:0; font-size:1.45rem; line-height:1.35; color:#1f2937; font-weight:700;">${escapeHTML(heading)}</h2>
+      <article style="background:#ffffff; border:1px solid rgba(31, 111, 178, 0.15); border-radius:20px; overflow:hidden; box-shadow:0 10px 25px -5px rgba(31, 111, 178, 0.1);">
+        <header style="background:linear-gradient(135deg, #1f6fb2 0%, #3586c9 100%); padding:20px; display:flex; align-items:center; gap:16px;">
+          <div style="background:#fff; padding:6px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15);">
+            <img src="${brasaoUrl}" alt="SINPRF/ES" style="width:52px; height:52px; object-fit:contain;">
+          </div>
+          <div>
+            <h2 style="margin:0; font-size:1.3rem; color:#ffffff; font-weight:800; letter-spacing:-0.01em;">${escapeHTML(heading)}</h2>
+            <div style="margin-top:2px; display:flex; align-items:center; gap:6px;">
+              <span style="width:8px; height:8px; border-radius:50%; background:#e83e8c; display:inline-block;"></span>
+              <span style="color:rgba(255,255,255,0.9); font-size:0.85rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Celebração Institucional</span>
+            </div>
+          </div>
         </header>
-        <section style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:16px;">
-          <h3 style="margin:0 0 6px; font-size:1.08rem; color:#0f172a; font-weight:700;">🎂 Feliz aniversário!</h3>
-          <p style="margin:0; color:#475569; line-height:1.55;">SINPRF/ES celebra com alegria este dia especial.</p>
-        </section>
-        <section>
-          <h3 style="margin:0 0 10px; font-size:1rem; color:#111827; font-weight:600;">Lista de aniversariantes</h3>
-          <ul style="margin:0; padding:0;">${listHtml}</ul>
-        </section>
-        ${parsed.footer ? `<footer style="margin-top:12px; color:#6b7280; font-size:0.93rem; font-style:italic;">${escapeHTML(parsed.footer)}</footer>` : ''}
+
+        <div style="padding:20px;">
+          <section style="background:linear-gradient(to right, #fdf2f8, #ffffff); border-left:4px solid #e83e8c; border-radius:8px; padding:16px; margin-bottom:20px; box-shadow:0 2px 8px rgba(232, 62, 140, 0.1);">
+            <h3 style="margin:0 0 4px; font-size:1.15rem; color:#be185d; font-weight:800; display:flex; align-items:center; gap:8px;">
+              <span>🎂</span> Feliz aniversário!
+            </h3>
+            <p style="margin:0; color:#831843; line-height:1.5; font-weight:500;">O SINPRF/ES parabeniza todos os colegas e familiares que celebram mais um ano de vida hoje!</p>
+          </section>
+
+          <section>
+            <h3 style="margin:0 0 12px; font-size:0.95rem; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.1rem;">🎊</span> Lista de aniversariantes
+            </h3>
+            <ul style="margin:0; padding:0;">${listHtml}</ul>
+          </section>
+
+          ${parsed.footer ? `
+            <footer style="margin-top:20px; padding-top:16px; border-top:1px dashed #cbd5e1; color:#64748b; font-size:0.85rem; font-style:italic; line-height:1.5; display:flex; align-items:flex-start; gap:8px;">
+              <span style="font-style:normal; opacity:0.7;">ℹ️</span>
+              <span>${escapeHTML(parsed.footer)}</span>
+            </footer>
+          ` : ''}
+        </div>
       </article>
     `;
   }

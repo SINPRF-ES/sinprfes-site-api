@@ -170,27 +170,48 @@ export default function InformeDetalheScreen({ route, navigation }: any) {
 
           {isAniversarios ? (
             <View style={styles.birthdayCard}>
-              <View style={styles.birthdayHeader}>
-                <Text style={styles.birthdayHeaderIcon}>🎉</Text>
-                <Text style={styles.birthdayTitle}>{birthdayTitle}</Text>
-              </View>
-
-              <View style={styles.birthdayHighlight}>
-                <Text style={styles.birthdayHighlightTitle}>🎂 Feliz aniversário!</Text>
-                <Text style={styles.birthdayHighlightText}>SINPRF/ES celebra com alegria este dia especial.</Text>
-              </View>
-
-              <View style={styles.birthdayListSection}>
-                <Text style={styles.birthdaySectionTitle}>Lista de aniversariantes</Text>
-                {birthdayData?.pessoas?.map((pessoa, index) => (
-                  <View key={`${pessoa.nome}-${index}`} style={styles.birthdayListItem}>
-                    <Text style={styles.birthdayPersonName}>{pessoa.nome}</Text>
-                    {!!pessoa.subline && <Text style={styles.birthdayPersonSubline}>{pessoa.subline}</Text>}
+              <View style={styles.birthdayGradientHeader}>
+                <View style={styles.birthdayLogoContainer}>
+                  <Image source={require('../../assets/logo.png')} style={styles.birthdayLogo} resizeMode="contain" />
+                </View>
+                <View style={styles.birthdayHeaderTextContainer}>
+                  <Text style={styles.birthdayTitle}>{birthdayTitle}</Text>
+                  <View style={styles.birthdayBadge}>
+                    <View style={styles.birthdayBadgeDot} />
+                    <Text style={styles.birthdayBadgeText}>CELEBRAÇÃO INSTITUCIONAL</Text>
                   </View>
-                ))}
+                </View>
               </View>
 
-              {!!birthdayData?.footer && <Text style={styles.birthdayFooter}>{birthdayData.footer}</Text>}
+              <View style={styles.birthdayBody}>
+                <View style={styles.birthdayHighlight}>
+                  <Text style={styles.birthdayHighlightTitle}>🎂 Feliz aniversário!</Text>
+                  <Text style={styles.birthdayHighlightText}>O SINPRF/ES parabeniza todos os colegas e familiares que celebram mais um ano de vida hoje!</Text>
+                </View>
+
+                <View style={styles.birthdayListSection}>
+                  <View style={styles.birthdaySectionHeader}>
+                    <Text style={styles.birthdaySectionIcon}>🎊</Text>
+                    <Text style={styles.birthdaySectionTitle}>LISTA DE ANIVERSARIANTES</Text>
+                  </View>
+                  {birthdayData?.pessoas?.map((pessoa, index) => (
+                    <View key={`${pessoa.nome}-${index}`} style={styles.birthdayListItem}>
+                      <Text style={styles.birthdayListItemBullet}>🎈</Text>
+                      <View style={styles.birthdayListItemContent}>
+                        <Text style={styles.birthdayPersonName}>{pessoa.nome}</Text>
+                        {!!pessoa.subline && <Text style={styles.birthdayPersonSubline}>{pessoa.subline}</Text>}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                {!!birthdayData?.footer && (
+                  <View style={styles.birthdayFooterContainer}>
+                    <Text style={styles.birthdayFooterIcon}>ℹ️</Text>
+                    <Text style={styles.birthdayFooter}>{birthdayData.footer}</Text>
+                  </View>
+                )}
+              </View>
             </View>
           ) : (
             <>
@@ -303,76 +324,146 @@ const styles = StyleSheet.create({
   },
   birthdayCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 14,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    padding: 16,
+    borderColor: 'rgba(31, 111, 178, 0.15)',
     marginBottom: 24,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#1f6fb2',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
   },
-  birthdayHeader: {
+  birthdayGradientHeader: {
+    backgroundColor: '#1f6fb2',
+    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 14,
+    gap: 16,
   },
-  birthdayHeaderIcon: {
-    fontSize: 16,
+  birthdayLogoContainer: {
+    backgroundColor: '#fff',
+    padding: 6,
+    borderRadius: 12,
+  },
+  birthdayLogo: {
+    width: 42,
+    height: 42,
+  },
+  birthdayHeaderTextContainer: {
+    flex: 1,
   },
   birthdayTitle: {
-    flex: 1,
-    fontSize: 22,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#ffffff',
+    lineHeight: 24,
+  },
+  birthdayBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  birthdayBadgeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#e83e8c',
+  },
+  birthdayBadgeText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 10,
     fontWeight: '700',
-    color: '#1f2937',
-    lineHeight: 30,
+    letterSpacing: 0.5,
+  },
+  birthdayBody: {
+    padding: 20,
   },
   birthdayHighlight: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf2f8',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    padding: 14,
-    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#e83e8c',
+    padding: 16,
+    marginBottom: 20,
   },
   birthdayHighlightTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
-    marginBottom: 6,
+    fontWeight: '800',
+    color: '#be185d',
+    marginBottom: 4,
   },
   birthdayHighlightText: {
     fontSize: 15,
-    color: '#475569',
+    color: '#831843',
     lineHeight: 22,
+    fontWeight: '500',
   },
   birthdayListSection: {
     marginBottom: 10,
   },
+  birthdaySectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  birthdaySectionIcon: {
+    fontSize: 18,
+  },
   birthdaySectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 10,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748b',
+    letterSpacing: 0.5,
   },
   birthdayListItem: {
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: 'rgba(31, 111, 178, 0.08)',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  birthdayListItemBullet: {
+    fontSize: 18,
+  },
+  birthdayListItemContent: {
+    flex: 1,
   },
   birthdayPersonName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
+    fontWeight: '700',
+    color: '#1f6fb2',
   },
   birthdayPersonSubline: {
     marginTop: 2,
     fontSize: 14,
-    color: '#64748b',
+    color: '#475569',
+    fontWeight: '500',
+  },
+  birthdayFooterContainer: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#cbd5e1',
+    borderStyle: 'dashed',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  birthdayFooterIcon: {
+    fontSize: 14,
+    opacity: 0.7,
   },
   birthdayFooter: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#6b7280',
+    flex: 1,
+    fontSize: 13,
+    color: '#64748b',
     fontStyle: 'italic',
+    lineHeight: 18,
   },
   gallerySection: {
     marginTop: 20,
