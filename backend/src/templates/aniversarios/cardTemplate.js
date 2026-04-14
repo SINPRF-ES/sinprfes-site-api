@@ -40,10 +40,6 @@ function buildBirthdayCard({ aniversariantes, date = new Date() }) {
     '',
     '### 🎊 Lista de aniversariantes',
     linhas,
-    '',
-    '---',
-    '',
-    '> 🇧🇷 Cores inspiradas na bandeira do ES e clima de festa com balões, bolo e celebração coletiva. 🥳🍰',
   ].join('\n');
 
   return { titulo, subtitulo, conteudo };
