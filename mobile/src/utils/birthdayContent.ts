@@ -54,13 +54,13 @@ export const parseBirthdayContent = (conteudo?: string | null): { pessoas: Birth
       continue;
     }
 
-    const splitWithDependent = rawLine.split(/\s*[·|-]\s*(?=(?:Dependente de|Filiado\(a\))\s*)/i);
+    const splitWithDependent = rawLine.split(/\s*[·|-]\s*(?=(?:Dependente de|Filiado\s*\(a\))\s*)/i);
     if (splitWithDependent.length > 1) {
       pessoas.push({ nome: splitWithDependent[0].trim(), subline: splitWithDependent[1].trim() });
       continue;
     }
 
-    if (/^(?:Dependente de|Filiado\(a\))\s*/i.test(rawLine) && pessoas.length > 0) {
+    if (/^(?:Dependente de|Filiado\s*\(a\))\s*/i.test(rawLine) && pessoas.length > 0) {
       if (!pessoas[pessoas.length - 1].subline) {
         pessoas[pessoas.length - 1].subline = rawLine;
       }
@@ -68,13 +68,20 @@ export const parseBirthdayContent = (conteudo?: string | null): { pessoas: Birth
     }
 
     const nextLine = lines[i + 1] ? lines[i + 1].replace(/^[•\-*]\s*/, '').trim() : '';
-    if (/^(?:Dependente de|Filiado\(a\))\s*/i.test(nextLine)) {
+    if (/^(?:Dependente de|Filiado\s*\(a\))\s*/i.test(nextLine)) {
       pessoas.push({ nome: rawLine, subline: nextLine });
       i += 1;
       continue;
     }
 
-    if (pessoas.length > 0 && rawLine.length > 110 && !/(Dependente de|Filiado\(a\))/i.test(rawLine)) {
+    if (pessoas.length > 0 && rawLine.length > 110 && !/(Dependente de|Filiado\s*\(a\))/i.test(rawLine)) {
+      continue;
+    }
+
+    if (/^Filiado\s*\(a\)$/i.test(rawLine)) {
+      if (pessoas.length > 0 && !pessoas[pessoas.length - 1].subline) {
+        pessoas[pessoas.length - 1].subline = rawLine;
+      }
       continue;
     }
 
