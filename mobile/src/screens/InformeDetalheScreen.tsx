@@ -7,84 +7,9 @@ import { useAuth } from '../hooks/useAuth';
 import { FontAwesome } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
 import SafeScreen from '../components/SafeScreen';
+import { parseBirthdayContent, sanitizeBirthdayHeading } from '../utils/birthdayContent';
 
 const { width } = Dimensions.get('window');
-
-type BirthdayPerson = {
-  nome: string;
-  subline?: string;
-};
-
-const BIRTHDAY_EMOJI_PREFIX_REGEX = /^[\s\-–—•*·]*[🎉🎂🎈✨🥳🎊🎁🍰🎆]+\s*/u;
-const BIRTHDAY_BR_PREFIX_REGEX = /^\s*BR\s*[:\-|]?\s*/i;
-
-const normalizeBirthdayLine = (line: string): string => {
-  return String(line || '')
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/\*\*/g, '') // Remove markdown bold
-    .replace(/#/g, '') // Remove markdown hashes
-    .replace(BIRTHDAY_BR_PREFIX_REGEX, '')
-    .replace(BIRTHDAY_EMOJI_PREFIX_REGEX, '')
-    .trim();
-};
-
-const sanitizeBirthdayHeading = (value?: string | null): string => {
-  const cleaned = normalizeBirthdayLine(String(value || '').replace(/[🎉🎂🎈✨🥳🎊🎁🍰🎆]/gu, '').trim());
-  return cleaned || 'Aniversariantes do dia';
-};
-
-const parseBirthdayContent = (conteudo?: string | null): { pessoas: BirthdayPerson[]; footer: string } => {
-  const lines = String(conteudo || '')
-    .replace(/\r\n/g, '\n')
-    .split('\n')
-    .map((line) => normalizeBirthdayLine(line))
-    .filter((line) => line && !/^[\s\-–—•*·=_]*$/.test(line)); // Filter empty or separator-only lines
-
-  const pessoas: BirthdayPerson[] = [];
-  let footer = '';
-
-  const skipHeading = (line: string) =>
-    /^(lista de aniversariantes|aniversariantes|feliz anivers[aá]rio!?|anivers[aá]rio|sinprf\/es celebra com alegria este dia especial\.?)$/i.test(line);
-
-  for (let i = 0; i < lines.length; i += 1) {
-    const rawLine = lines[i].replace(/^[•\-*]\s*/, '').trim();
-    if (!rawLine || skipHeading(rawLine)) continue;
-
-    if (rawLine.startsWith('>') || (i === lines.length - 1 && i > 0 && !/anivers[aá]ri/i.test(rawLine) && rawLine.length > 20 && !/(Dependente de|Filiado\(a\))/i.test(rawLine))) {
-      footer = rawLine.replace(/^>\s*/, '').trim();
-      continue;
-    }
-
-    const splitWithDependent = rawLine.split(/\s*[·|-]\s*(?=(?:Dependente de|Filiado\(a\))\s*)/i);
-    if (splitWithDependent.length > 1) {
-      pessoas.push({ nome: splitWithDependent[0].trim(), subline: splitWithDependent[1].trim() });
-      continue;
-    }
-
-    if (/^(?:Dependente de|Filiado\(a\))\s*/i.test(rawLine) && pessoas.length > 0) {
-      if (!pessoas[pessoas.length - 1].subline) {
-        pessoas[pessoas.length - 1].subline = rawLine;
-        continue;
-      }
-    }
-
-    const nextLine = lines[i + 1] ? lines[i + 1].replace(/^[•\-*]\s*/, '').trim() : '';
-    if (/^(?:Dependente de|Filiado\(a\))\s*/i.test(nextLine)) {
-      pessoas.push({ nome: rawLine, subline: nextLine });
-      i += 1;
-      continue;
-    }
-
-    if (!/anivers[aá]ri/i.test(rawLine) && rawLine.length <= 110 && pessoas.length > 0 && i === lines.length - 1 && !/(Dependente de|Filiado\(a\))/i.test(rawLine)) {
-      footer = rawLine;
-      continue;
-    }
-
-    pessoas.push({ nome: rawLine });
-  }
-
-  return { pessoas, footer };
-};
 
 export default function InformeDetalheScreen({ route, navigation }: any) {
   const { newsId, publicRef, module = 'informes' } = route.params || {};
@@ -204,13 +129,6 @@ export default function InformeDetalheScreen({ route, navigation }: any) {
                     </View>
                   ))}
                 </View>
-
-                {!!birthdayData?.footer && (
-                  <View style={styles.birthdayFooterContainer}>
-                    <Text style={styles.birthdayFooterIcon}>ℹ️</Text>
-                    <Text style={styles.birthdayFooter}>{birthdayData.footer}</Text>
-                  </View>
-                )}
               </View>
             </View>
           ) : (
@@ -443,27 +361,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#475569',
     fontWeight: '500',
-  },
-  birthdayFooterContainer: {
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#cbd5e1',
-    borderStyle: 'dashed',
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  birthdayFooterIcon: {
-    fontSize: 14,
-    opacity: 0.7,
-  },
-  birthdayFooter: {
-    flex: 1,
-    fontSize: 13,
-    color: '#64748b',
-    fontStyle: 'italic',
-    lineHeight: 18,
   },
   gallerySection: {
     marginTop: 20,
