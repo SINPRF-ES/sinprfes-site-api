@@ -8,6 +8,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
+import { getBirthdayListSummary } from '../utils/birthdayContent';
 
 export default function AniversariosScreen() {
   const navigation = useNavigation<any>();
@@ -67,7 +68,7 @@ export default function AniversariosScreen() {
               )}
             </View>
             <Text style={styles.title} numberOfLines={2}>{item.titulo}</Text>
-            <Text style={styles.summary} numberOfLines={3}>{item.conteudo}</Text>
+            <Text style={styles.summary} numberOfLines={2}>{getBirthdayListSummary(item.conteudo)}</Text>
           </View>
         </TouchableOpacity>
       );
