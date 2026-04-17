@@ -351,8 +351,11 @@ async function resolvePushTargets(targetType, targetValue) {
   `;
   const params = [...targetClause.params, ...validFilters.params];
 
-  const { rows } = await pool.query(sql, params);
-  const diagnostics = await getResolveDiagnostics(targetType, normalizedTargetValue);
+  // BOLT: Parallelize token resolution and diagnostics fetching to reduce latency
+  const [{ rows }, diagnostics] = await Promise.all([
+    pool.query(sql, params),
+    getResolveDiagnostics(targetType, normalizedTargetValue)
+  ]);
 
   log.info("PushService.ResolveTargetsCounts", {
     targetType,
