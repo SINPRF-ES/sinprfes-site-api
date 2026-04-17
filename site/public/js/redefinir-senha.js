@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("reset-form");
   const msgEl = document.getElementById("reset-mensagem");
 
+  const exibirMensagem = (el, texto, tipo) => window.Utils && window.Utils.exibirMensagem(el, texto, tipo);
+
   // Lê token da querystring
   const params = new URLSearchParams(window.location.search);
   const token = params.get("token");
@@ -18,9 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (!token) {
-    if (msgEl) {
-      msgEl.textContent = "Link inválido. Falta o token na URL.";
-    }
+    exibirMensagem(msgEl, "Link inválido. O token de recuperação de senha não foi encontrado na URL.", "danger");
     if (form) {
       form.style.display = "none";
     }
@@ -30,23 +30,23 @@ document.addEventListener("DOMContentLoaded", () => {
   if (form) {
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      msgEl.textContent = "";
+      exibirMensagem(msgEl, "");
 
       const senhaNova = document.getElementById("senha-nova").value;
       const senhaConfirma = document.getElementById("senha-confirma").value;
 
       if (!senhaNova || !senhaConfirma) {
-        msgEl.textContent = "Preencha os dois campos de senha.";
+        exibirMensagem(msgEl, "Preencha os dois campos de senha.");
         return;
       }
 
       if (senhaNova !== senhaConfirma) {
-        msgEl.textContent = "As senhas não conferem.";
+        exibirMensagem(msgEl, "As senhas não conferem.");
         return;
       }
 
       if (senhaNova.length < 6) {
-        msgEl.textContent = "A senha deve ter pelo menos 6 caracteres.";
+        exibirMensagem(msgEl, "A senha deve ter pelo menos 6 caracteres.");
         return;
       }
 
@@ -55,7 +55,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         btnSubmit.disabled = true;
-        btnSubmit.innerHTML = "Salvando...";
+        btnSubmit.innerHTML = '<span aria-hidden="true" class="ui-spinner"></span> Salvando...';
+        btnSubmit.setAttribute("aria-busy", "true");
 
         const resp = await fetch(`${API_BASE}/api/senha/resetar`, {
           method: "POST",
@@ -68,28 +69,26 @@ document.addEventListener("DOMContentLoaded", () => {
           }),
         });
 
-        const data = await resp.json();
+        const data = await resp.json().catch(() => ({}));
 
         if (!resp.ok) {
-          msgEl.textContent =
-            data.error || "Erro ao redefinir a senha. Tente novamente.";
+          exibirMensagem(msgEl, data.error || "Erro ao redefinir a senha. Tente novamente.");
           return;
         }
 
-        msgEl.textContent =
-          data.message ||
-          "Senha redefinida com sucesso. Você já pode voltar à tela de login.";
+        exibirMensagem(msgEl, data.message || "Senha redefinida com sucesso. Redirecionando para a tela de login...", "success");
 
-        // Opcional: redirecionar para login após alguns segundos
+        // Redirecionar para login após alguns segundos
         setTimeout(() => {
           window.location.href = "/login.html";
         }, 4000);
       } catch (err) {
         console.error("Erro ao redefinir senha:", err);
-        msgEl.textContent = "Erro de comunicação com o servidor.";
+        exibirMensagem(msgEl, "Erro de comunicação com o servidor.");
       } finally {
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = originalBtnText;
+        btnSubmit.removeAttribute("aria-busy");
       }
     });
   }

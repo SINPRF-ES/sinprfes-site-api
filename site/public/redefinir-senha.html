@@ -30,7 +30,7 @@
 
       <form id="reset-form" class="ui-stack">
         <div class="ui-form-group">
-          <label for="senha-nova" class="ui-label">Nova senha</label>
+          <label for="senha-nova" class="ui-label">Nova senha <span class="ui-text-danger" aria-hidden="true">*</span></label>
           <input
             type="password"
             id="senha-nova"
@@ -42,7 +42,7 @@
         </div>
 
         <div class="ui-form-group">
-          <label for="senha-confirma" class="ui-label">Confirme a nova senha</label>
+          <label for="senha-confirma" class="ui-label">Confirme a nova senha <span class="ui-text-danger" aria-hidden="true">*</span></label>
           <input
             type="password"
             id="senha-confirma"
@@ -60,9 +60,9 @@
         </div>
       </form>
 
-      <p id="reset-mensagem" class="field-hint" role="status" aria-live="polite" style="font-size: 0.875rem; color: var(--ui-danger); text-align: center; min-height: 1.25rem;"></p>
+      <div id="reset-mensagem" role="status" aria-live="polite" style="display: none; margin-top: var(--ui-space-3);"></div>
 
-      <p class="field-hint" style="color: var(--ui-text-muted);">
+      <p class="field-hint" style="color: var(--ui-text-muted); margin-top: var(--ui-space-4);">
         Se este link estiver expirado ou inválido, volte à página de login
         e utilize a opção "Esqueci minha senha" novamente.
       </p>

@@ -32,7 +32,7 @@
       <!-- FORMULÁRIO DE LOGIN -->
       <form id="login-form" class="ui-stack">
         <div class="ui-form-group">
-          <label for="login-cpf" class="ui-label">CPF</label>
+          <label for="login-cpf" class="ui-label">CPF <span class="ui-text-danger" aria-hidden="true">*</span></label>
           <input
             type="text"
             id="login-cpf"
@@ -48,7 +48,7 @@
         </div>
 
         <div class="ui-form-group">
-          <label for="login-senha" class="ui-label">Senha</label>
+          <label for="login-senha" class="ui-label">Senha <span class="ui-text-danger" aria-hidden="true">*</span></label>
           <input
             type="password"
             id="login-senha"
@@ -87,7 +87,7 @@
           </button>
         </div>
 
-        <div id="login-mensagem" class="field-hint" role="status" aria-live="polite" style="font-size: 0.875rem; color: var(--ui-danger); text-align: center; min-height: 1.25rem;"></div>
+        <div id="login-mensagem" role="status" aria-live="polite" style="display: none;"></div>
       </form>
 
       <hr class="form-separator" style="margin: var(--ui-space-5) 0; border: 0; border-top: 1px solid var(--ui-border);" />
@@ -103,7 +103,7 @@
 
         <form id="forgot-form" class="ui-stack">
           <div class="ui-form-group">
-            <label for="forgot-cpf" class="ui-label">CPF</label>
+            <label for="forgot-cpf" class="ui-label">CPF <span class="ui-text-danger" aria-hidden="true">*</span></label>
             <input
               type="text"
               id="forgot-cpf"
@@ -118,14 +118,14 @@
             <span id="forgot-cpf-hint" class="sr-only">Digite apenas os 11 números do seu CPF.</span>
           </div>
 
+          <div id="forgot-mensagem" role="status" aria-live="polite" style="display: none;"></div>
+
           <div class="form-actions">
             <button type="submit" id="btn-forgot-submit" class="ui-button ui-button-outline" style="width: 100%;">
               Enviar link para criar nova senha
             </button>
           </div>
         </form>
-
-        <div id="forgot-mensagem" class="field-hint" role="status" aria-live="polite" style="min-height: 1.25rem;"></div>
 
         <p class="field-hint">
           O sistema informará para qual e-mail o link foi enviado. Caso
