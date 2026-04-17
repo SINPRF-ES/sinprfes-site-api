@@ -358,6 +358,23 @@
     });
   }
 
+  /**
+   * Palette: Centraliza a exibição de mensagens com o novo componente ui-alert.
+   * Útil para feedback instantâneo em formulários.
+   */
+  function exibirMensagem(el, texto, tipo = "danger") {
+    if (!el) return;
+    el.textContent = texto;
+    if (!texto) {
+      el.className = "field-hint";
+      el.style.display = "none";
+      return;
+    }
+    el.className = `ui-alert ui-alert-${tipo}`;
+    el.style.display = "flex";
+    el.removeAttribute("hidden");
+  }
+
   /** Palette: Inicializa o toggle de "Mostrar Senha" para campos password. */
   function initPasswordToggles() {
     document.querySelectorAll('input[type="password"]:not([data-has-toggle])').forEach(el => {
@@ -542,7 +559,8 @@
     unlockScroll,
     fecharModal,
     resolveApiBase,
-    initPasswordToggles
+    initPasswordToggles,
+    exibirMensagem
   };
 
   function fecharModal(id) {

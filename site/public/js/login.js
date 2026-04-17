@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const loginForm = document.getElementById("login-form");
   const loginMsg = document.getElementById("login-mensagem");
 
+  const exibirMensagem = (el, texto, tipo) => window.Utils && window.Utils.exibirMensagem(el, texto, tipo);
+
   const forgotForm = document.getElementById("forgot-form");
   const forgotMsg = document.getElementById("forgot-mensagem");
 
@@ -100,9 +102,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (loginMsg) {
-        loginMsg.textContent = "";
-      }
+      exibirMensagem(loginMsg, "");
 
       const cpfInput = document.getElementById("login-cpf");
       const senhaInput = document.getElementById("login-senha");
@@ -111,9 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const senha = senhaInput ? senhaInput.value : "";
 
       if (!cpf || !senha) {
-        if (loginMsg) {
-          loginMsg.textContent = "Informe CPF e senha.";
-        }
+        exibirMensagem(loginMsg, "Informe CPF e senha.");
         return;
       }
 
@@ -154,11 +152,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (campo2fa) {
               campo2fa.style.display = "block";
             }
-            if (loginMsg) {
-              loginMsg.textContent =
-                data.error ||
-                "Este usuário possui 2FA habilitado. Informe o código do aplicativo autenticador.";
-            }
+            exibirMensagem(
+              loginMsg,
+              data.error || "Este usuário possui 2FA habilitado. Informe o código do aplicativo autenticador."
+            );
             // Foca no campo de 2FA, se existir
             if (inputToken2fa) {
               inputToken2fa.focus();
@@ -166,11 +163,10 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
 
-          if (loginMsg) {
-            loginMsg.textContent =
-              (data && data.error) ||
-              "Erro ao realizar login. Verifique seus dados e tente novamente.";
-          }
+          exibirMensagem(
+            loginMsg,
+            (data && data.error) || "Erro ao realizar login. Verifique seus dados e tente novamente."
+          );
           return;
         }
 
@@ -204,18 +200,17 @@ document.addEventListener("DOMContentLoaded", () => {
           localStorage.setItem("perfil_acesso", data.perfil_acesso);
         }
 
-        if (loginMsg) {
-          loginMsg.textContent =
-            data.message || "Login realizado com sucesso. Redirecionando...";
-        }
+        exibirMensagem(
+          loginMsg,
+          data.message || "Login realizado com sucesso. Redirecionando...",
+          "success"
+        );
 
         // Redireciona para Página Inicial
         window.location.href = "/area-filiado.html";
       } catch (err) {
         console.error("Erro no login:", err);
-        if (loginMsg) {
-          loginMsg.textContent = "Erro de comunicação com o servidor.";
-        }
+        exibirMensagem(loginMsg, "Erro de comunicação com o servidor.");
       } finally {
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = originalBtnText;
@@ -230,17 +225,13 @@ document.addEventListener("DOMContentLoaded", () => {
   if (forgotForm) {
     forgotForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (forgotMsg) {
-        forgotMsg.textContent = "";
-      }
+      exibirMensagem(forgotMsg, "");
 
       const cpfInput = document.getElementById("forgot-cpf");
       const cpf = normalizarCpf(cpfInput ? cpfInput.value : "");
 
       if (!cpf) {
-        if (forgotMsg) {
-          forgotMsg.textContent = "Informe o CPF.";
-        }
+        exibirMensagem(forgotMsg, "Informe o CPF.");
         return;
       }
 
@@ -263,31 +254,25 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await resp.json().catch(() => ({}));
 
         if (!resp.ok) {
-          if (forgotMsg) {
-            forgotMsg.textContent =
-              (data && data.error) ||
-              "Erro ao solicitar redefinição de senha.";
-          }
+          exibirMensagem(
+            forgotMsg,
+            (data && data.error) || "Erro ao solicitar redefinição de senha."
+          );
           return;
         }
 
         // Mensagem padrão
-        let msg =
-          (data && data.message) || "Solicitação registrada.";
+        let msg = (data && data.message) || "Solicitação registrada.";
 
         // Se o backend devolver o e-mail de destino, inclui na mensagem
         if (data && data.email_destino) {
           msg += ` E-mail de destino: ${data.email_destino}.`;
         }
 
-        if (forgotMsg) {
-          forgotMsg.textContent = msg;
-        }
+        exibirMensagem(forgotMsg, msg, "success");
       } catch (err) {
         console.error("Erro em esqueci minha senha:", err);
-        if (forgotMsg) {
-          forgotMsg.textContent = "Erro de comunicação com o servidor.";
-        }
+        exibirMensagem(forgotMsg, "Erro de comunicação com o servidor.");
       } finally {
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = originalBtnText;

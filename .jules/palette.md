@@ -47,3 +47,7 @@
 ## 2026-05-18 - [Interactive Loading States & Visual Limits]
 **Learning:** Providing immediate visual feedback during async operations (disabling buttons and changing text) significantly reduces user anxiety and prevents double-submissions. Similarly, visual cues on character limits (e.g., changing color at 90% threshold) help users self-correct before hitting a hard validation error.
 **Action:** Implement button loading states in all primary forms. Add visual thresholds to character counters for critical inputs like push notification titles and bodies.
+
+## 2026-10-31 - [Centralized Messaging Utility & Standardized Alerts]
+**Learning:** In a multi-page institutional site with legacy JS, duplicative message-rendering logic leads to inconsistent UX and accessibility. Centralizing an `exibirMensagem` utility in a shared `utils.js` (exposed via `window.Utils`) ensures that all modules use the same standardized `.ui-alert` styles and ARIA-live behavior. This also makes it easier to enforce high-contrast colors and consistent icons (e.g., info, success, warning, danger) across the entire frontend.
+**Action:** Always prefer centralizing UI feedback logic in `site/public/js/utils.js`. Use the standardized `.ui-alert-*` classes defined in `ui-canon.css` for all status messages to maintain visual and semantic consistency.
