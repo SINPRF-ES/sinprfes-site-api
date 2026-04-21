@@ -11,6 +11,14 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString('pt-BR');
 }
 
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 function toPreview(value, maxLength = 180) {
   if (!value) return 'Conteúdo em atualização.';
   const plain = window.InformesRenderer?.renderInformesPlainText
@@ -67,7 +75,7 @@ async function renderInstagramFeed(API_BASE, mountEl) {
 
     const visiblePosts = [...posts]
       .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
-      .slice(0, 4);
+      .slice(0, 5);
 
     mountEl.innerHTML = `
       <section class="ui-card instagram-news-shell">
@@ -156,11 +164,156 @@ async function fetchNoticias(API_BASE, statusEditorial, pagina = 1) {
   };
 }
 
-async function renderHomeNews(API_BASE, featuredEl, recentEl) {
-  if (!featuredEl || !recentEl) return;
+async function fetchNoticiasPublicas(API_BASE, pagina = 1) {
+  const query = new URLSearchParams({
+    pagina: String(pagina),
+    status: 'PUBLICADA'
+  });
+  const response = await fetch(`${API_BASE}/api/noticias?${query.toString()}`);
+  const payload = await response.json();
+  return {
+    items: Array.isArray(payload?.items) ? payload.items : [],
+    pagination: payload?.pagination || { page: 1, totalPages: 1 }
+  };
+}
+
+async function fetchTodasNoticiasPublicas(API_BASE) {
+  const all = [];
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const { items, pagination } = await fetchNoticiasPublicas(API_BASE, page);
+    all.push(...items);
+    totalPages = Number(pagination?.totalPages || 1);
+    page += 1;
+  } while (page <= totalPages);
+
+  return all;
+}
+
+function buildSummaryIndexItem(item) {
+  const title = escapeHtml(item.title || 'Publicação');
+  const source = item.source === 'instagram' ? 'Instagram' : 'Notícias';
+  const date = formatDate(item.date);
+  const preview = escapeHtml(item.preview || '');
+  return `
+    <a href="${item.url}" class="news-summary-item" ${item.external ? 'target="_blank" rel="noopener noreferrer"' : ''}>
+      <span class="news-summary-item__meta">${source} • ${date}</span>
+      <strong>${title}</strong>
+      ${preview ? `<small>${preview}</small>` : ''}
+    </a>
+  `;
+}
+
+function wireSummarySearch(mountEl, indexItems) {
+  const input = mountEl.querySelector('#news-summary-search');
+  const sourceSelect = mountEl.querySelector('#news-summary-source');
+  const countEl = mountEl.querySelector('#news-summary-count');
+  const listEl = mountEl.querySelector('#news-summary-list');
+
+  if (!input || !sourceSelect || !countEl || !listEl) return;
+
+  const render = () => {
+    const term = normalizeText(input.value);
+    const source = sourceSelect.value;
+
+    const filtered = indexItems.filter((item) => {
+      if (source !== 'all' && item.source !== source) return false;
+      if (!term) return true;
+      return item.searchText.includes(term);
+    });
+
+    countEl.textContent = `${filtered.length} resultado(s)`;
+
+    if (filtered.length === 0) {
+      listEl.innerHTML = '<p class="home-featured-news__empty">Nenhum resultado para os filtros informados.</p>';
+      return;
+    }
+
+    listEl.innerHTML = filtered.map((item) => buildSummaryIndexItem(item)).join('');
+  };
+
+  input.addEventListener('input', render);
+  sourceSelect.addEventListener('change', render);
+  render();
+}
+
+async function renderNoticiasResumo(API_BASE, mountEl) {
+  if (!mountEl) return;
+
+  mountEl.innerHTML = '<section class="ui-card"><p style="color:#64748b;">Carregando sumário de notícias e Instagram...</p></section>';
+
+  try {
+    const [noticias, instagramResponse] = await Promise.all([
+      fetchTodasNoticiasPublicas(API_BASE),
+      fetch(`${API_BASE}/api/public/instagram-feed`).then((res) => res.json()).catch(() => ({ ok: false, posts: [] }))
+    ]);
+
+    const newsItems = noticias.map((item) => {
+      const title = item.titulo || 'Notícia';
+      const preview = toPreview(item.conteudo, 120);
+      const date = item.published_at || item.data_noticia || item.created_at;
+      const url = (typeof item.public_ref === 'string' && item.public_ref.length > 0)
+        ? `/noticias/${encodeURIComponent(item.public_ref)}`
+        : '/noticias.html';
+      return {
+        source: 'noticias',
+        title,
+        preview,
+        date,
+        url,
+        external: false,
+        searchText: normalizeText(`${title} ${preview}`)
+      };
+    });
+
+    const instagramItems = (Array.isArray(instagramResponse?.posts) ? instagramResponse.posts : []).map((post) => {
+      const title = post.title || 'Post no Instagram';
+      const preview = title.length > 120 ? `${title.slice(0, 120)}…` : title;
+      return {
+        source: 'instagram',
+        title,
+        preview,
+        date: post.date,
+        url: post.link || INSTAGRAM_PROFILE_URL,
+        external: true,
+        searchText: normalizeText(`${title} ${preview}`)
+      };
+    });
+
+    const combined = [...newsItems, ...instagramItems]
+      .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+
+    mountEl.innerHTML = `
+      <section class="ui-card news-summary-card">
+        <header class="instagram-news-header instagram-news-header--centered">
+          <h2 class="section-title"><span class="emoji">📚</span><span>Sumário geral</span></h2>
+          <p style="margin:8px 0 0;color:#64748b;">Busque notícias públicas e publicações do Instagram em um único índice.</p>
+        </header>
+        <div class="news-summary-toolbar">
+          <input id="news-summary-search" type="search" placeholder="Buscar por título ou conteúdo..." />
+          <select id="news-summary-source" aria-label="Filtrar origem">
+            <option value="all">Todas as origens</option>
+            <option value="noticias">Somente notícias</option>
+            <option value="instagram">Somente Instagram</option>
+          </select>
+        </div>
+        <p id="news-summary-count" class="news-summary-count"></p>
+        <div id="news-summary-list" class="news-summary-list"></div>
+      </section>
+    `;
+
+    wireSummarySearch(mountEl, combined);
+  } catch (_error) {
+    mountEl.innerHTML = '<section class="ui-card instagram-fallback"><p>Não foi possível carregar o sumário geral no momento.</p></section>';
+  }
+}
+
+async function renderHomeNews(API_BASE, featuredEl) {
+  if (!featuredEl) return;
 
   featuredEl.innerHTML = '<section class="home-featured-news ui-card"><div class="home-featured-news__body"><p class="home-featured-news__empty">Carregando notícia em destaque...</p></div></section>';
-  recentEl.innerHTML = '<section class="home-recent-news ui-card"><div class="home-recent-news__header"><h3>Mais recentes</h3></div><p class="home-recent-news__empty">Carregando notícias recentes...</p></section>';
 
   try {
     const [featuredPayload, archivedPayload] = await Promise.all([
@@ -169,13 +322,9 @@ async function renderHomeNews(API_BASE, featuredEl, recentEl) {
     ]);
 
     const featuredItem = featuredPayload.items[0] || archivedPayload.items[0] || null;
-    const secondaryItems = [...featuredPayload.items.slice(1), ...archivedPayload.items]
-      .filter(Boolean)
-      .slice(0, 3);
 
     if (!featuredItem) {
       featuredEl.innerHTML = '<section class="home-featured-news ui-card"><div class="home-featured-news__body"><p class="home-featured-news__empty">Nenhuma notícia pública disponível no momento.</p></div></section>';
-      recentEl.innerHTML = '<section class="home-recent-news ui-card"><div class="home-recent-news__header"><h3>Mais recentes</h3></div><p class="home-recent-news__empty">Novas publicações aparecerão aqui assim que estiverem disponíveis.</p></section>';
       return;
     }
 
@@ -206,32 +355,8 @@ async function renderHomeNews(API_BASE, featuredEl, recentEl) {
       </article>
     `;
 
-    if (secondaryItems.length === 0) {
-      recentEl.innerHTML = `
-        <section class="home-recent-news ui-card">
-          <div class="home-recent-news__header">
-            <h3>Mais recentes</h3>
-            <p>As próximas atualizações públicas aparecerão aqui.</p>
-          </div>
-        </section>
-      `;
-      return;
-    }
-
-    recentEl.innerHTML = `
-      <section class="home-recent-news ui-card">
-        <div class="home-recent-news__header">
-          <h3>Mais recentes</h3>
-          <p>Outras publicações para manter a navegação informativa sem sobrecarregar a primeira dobra.</p>
-        </div>
-        <div class="home-recent-news__list">
-          ${secondaryItems.map((item) => buildRecentNewsCard(item)).join('')}
-        </div>
-      </section>
-    `;
   } catch (_error) {
     featuredEl.innerHTML = '<section class="home-featured-news ui-card"><div class="home-featured-news__body"><p class="home-featured-news__empty">Não foi possível carregar o destaque no momento.</p></div></section>';
-    recentEl.innerHTML = '<section class="home-recent-news ui-card"><div class="home-recent-news__header"><h3>Mais recentes</h3></div><p class="home-recent-news__empty">Não foi possível carregar as notícias recentes.</p></section>';
   }
 }
 
@@ -291,14 +416,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (page === 'home') {
     await renderHomeNews(
       API_BASE,
-      document.querySelector('#home-featured-news-root'),
-      document.querySelector('#home-recent-news-root')
+      document.querySelector('#home-featured-news-root')
     );
     await renderInstagramFeed(API_BASE, document.querySelector('#instagram-news-root'));
     return;
   }
 
   if (page === 'noticias') {
+    await renderNoticiasResumo(API_BASE, document.querySelector('#news-summary-root'));
     await renderNoticiasArquivo(API_BASE, document.querySelector('#cms-news-root'));
   }
 });
