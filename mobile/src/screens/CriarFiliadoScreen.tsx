@@ -16,7 +16,7 @@ import { toISODate } from '../utils/date';
 import { onlyDigits } from '../shared/format/formatters';
 import { isGestao as checkIsGestao } from '../utils/filiadoUtils';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
-import { normalizeNome, SITUACAO_SINDICAL } from '../utils/canon';
+import { normalizeNome, SITUACAO_SINDICAL, validarUfSindicatoExterno } from '../utils/canon';
 
 const initialFiliadoState: Partial<Filiado> = {
   nome: '',
@@ -65,6 +65,12 @@ export default function CriarFiliadoScreen({ navigation }: any) {
 
     const situacaoSindical = filiado.situacao_sindical || SITUACAO_SINDICAL.FILIADO_SINPRF_ES;
     const ehFiliadoEfetivo = situacaoSindical === SITUACAO_SINDICAL.FILIADO_SINPRF_ES;
+
+    const validacaoUfExterna = validarUfSindicatoExterno(filiado.uf_sindicato_externo, situacaoSindical);
+    if (!validacaoUfExterna.ok) {
+      Alert.alert('Erro de Validação', validacaoUfExterna.message);
+      return;
+    }
 
     if (ehFiliadoEfetivo) {
       if (!filiado.nome || !filiado.cpf || !filiado.email1 || !filiado.telefone1) {

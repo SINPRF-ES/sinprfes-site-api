@@ -836,13 +836,23 @@
 
             const situacaoFinal = payload.situacao_sindical || (filiado && filiado.situacao_sindical) || "FILIADO_SINPRF_ES";
             const ehFiliadoEfetivo = situacaoFinal === "FILIADO_SINPRF_ES";
-            if (situacaoFinal !== "FILIADO_OUTRO_SINDICATO") {
-                payload.uf_sindicato_externo = null;
-            } else {
-                payload.uf_sindicato_externo = (payload.uf_sindicato_externo || "").toUpperCase() || null;
-                if (payload.uf_sindicato_externo === "ES") {
-                    alert("Para filiação a outro sindicato, a UF do sindicato externo não pode ser ES.");
+
+            if (global.Canon?.validarUfSindicatoExterno) {
+                const validacao = global.Canon.validarUfSindicatoExterno(payload.uf_sindicato_externo, situacaoFinal);
+                if (!validacao.ok) {
+                    alert(validacao.message);
                     return;
+                }
+                payload.uf_sindicato_externo = validacao.value;
+            } else {
+                if (situacaoFinal !== "FILIADO_OUTRO_SINDICATO") {
+                    payload.uf_sindicato_externo = null;
+                } else {
+                    payload.uf_sindicato_externo = (payload.uf_sindicato_externo || "").toUpperCase() || null;
+                    if (payload.uf_sindicato_externo === "ES") {
+                        alert("Para filiação a outro sindicato, a UF do sindicato externo não pode ser ES.");
+                        return;
+                    }
                 }
             }
 
@@ -1131,13 +1141,23 @@
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
 
             const ehFiliadoEfetivo = payload.situacao_sindical === "FILIADO_SINPRF_ES";
-            if (payload.situacao_sindical !== "FILIADO_OUTRO_SINDICATO") {
-                payload.uf_sindicato_externo = null;
-            } else {
-                payload.uf_sindicato_externo = (payload.uf_sindicato_externo || "").toUpperCase() || null;
-                if (payload.uf_sindicato_externo === "ES") {
-                    alert("Para filiação a outro sindicato, a UF do sindicato externo não pode ser ES.");
+
+            if (global.Canon?.validarUfSindicatoExterno) {
+                const validacao = global.Canon.validarUfSindicatoExterno(payload.uf_sindicato_externo, payload.situacao_sindical);
+                if (!validacao.ok) {
+                    alert(validacao.message);
                     return;
+                }
+                payload.uf_sindicato_externo = validacao.value;
+            } else {
+                if (payload.situacao_sindical !== "FILIADO_OUTRO_SINDICATO") {
+                    payload.uf_sindicato_externo = null;
+                } else {
+                    payload.uf_sindicato_externo = (payload.uf_sindicato_externo || "").toUpperCase() || null;
+                    if (payload.uf_sindicato_externo === "ES") {
+                        alert("Para filiação a outro sindicato, a UF do sindicato externo não pode ser ES.");
+                        return;
+                    }
                 }
             }
 
