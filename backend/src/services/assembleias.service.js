@@ -148,8 +148,13 @@ async function contarFiliadosAtivosParaQuorum(client = null) {
 async function realizarAutoCheckin(client, quorumId, userId, tipoChamada) {
   if (!userId) return;
 
-  const { rows: userRows } = await client.query("SELECT perfil_acesso FROM filiados WHERE id = $1", [userId]);
+  const { rows: userRows } = await client.query("SELECT perfil_acesso, situacao_sindical FROM filiados WHERE id = $1", [userId]);
   const perfil = (userRows[0]?.perfil_acesso || "").toUpperCase();
+  const situacaoSindical = userRows[0]?.situacao_sindical;
+
+  if (situacaoSindical !== 'FILIADO_SINPRF_ES') {
+    throw new Error(Textos.AUTH.PERMISSAO_INSUFICIENTE);
+  }
 
   // ADMIN e COMUNICADOR não contam quórum nem votam, logo não fazem check-in
   if (perfil !== 'ADMIN' && perfil !== 'COMUNICADOR') {
@@ -405,8 +410,12 @@ async function realizarCheckin(dados) {
   const { assembleia_quorum_id, filiado_id, origem, assembleia_id } = dados;
 
   // Blindagem de perfil: ADMIN e COMUNICADOR não fazem check-in
-  const { rows: userRows } = await pool.query("SELECT perfil_acesso FROM filiados WHERE id = $1", [filiado_id]);
+  const { rows: userRows } = await pool.query("SELECT perfil_acesso, situacao_sindical FROM filiados WHERE id = $1", [filiado_id]);
   const perfil = (userRows[0]?.perfil_acesso || "").toUpperCase();
+  const situacaoSindical = userRows[0]?.situacao_sindical;
+  if (situacaoSindical !== 'FILIADO_SINPRF_ES') {
+    throw new Error(Textos.AUTH.PERMISSAO_INSUFICIENTE);
+  }
   if (perfil === 'ADMIN' || perfil === 'COMUNICADOR') {
     throw new Error(Textos.AUTH.PERMISSAO_INSUFICIENTE);
   }
@@ -544,8 +553,12 @@ async function registrarVoto(votacaoId, filiadoId, voto, assembleiaId) {
   }
 
   // Blindagem de perfil: ADMIN e COMUNICADOR não votam
-  const { rows: userRows } = await pool.query("SELECT perfil_acesso FROM filiados WHERE id = $1", [filiadoId]);
+  const { rows: userRows } = await pool.query("SELECT perfil_acesso, situacao_sindical FROM filiados WHERE id = $1", [filiadoId]);
   const perfil = (userRows[0]?.perfil_acesso || "").toUpperCase();
+  const situacaoSindical = userRows[0]?.situacao_sindical;
+  if (situacaoSindical !== 'FILIADO_SINPRF_ES') {
+    throw new Error(Textos.AUTH.PERMISSAO_INSUFICIENTE);
+  }
   if (perfil === 'ADMIN' || perfil === 'COMUNICADOR') {
     throw new Error(Textos.AUTH.PERMISSAO_INSUFICIENTE);
   }

@@ -61,11 +61,16 @@ function buildResolveTargetClause(targetType, targetValue, startIndex = 1) {
       break;
     case "FILIADO": {
       const targetId = normalizeTargetId(targetValue);
+      joins = "JOIN filiados f ON pt.user_id = f.id";
       conditions.push(`pt.user_id = $${startIndex + params.length}`);
+      conditions.push("f.situacao_sindical = 'FILIADO_SINPRF_ES'");
       params.push(targetId);
       break;
     }
     case "ALL":
+      joins = "JOIN filiados f ON pt.user_id = f.id";
+      conditions.push("f.situacao_sindical = 'FILIADO_SINPRF_ES'");
+      break;
     default:
       break;
   }

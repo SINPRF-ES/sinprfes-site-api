@@ -10,6 +10,10 @@ function requirePermission(permission) {
       return res.status(401).json({ error: Textos.AUTH.TOKEN_INVALIDO });
     }
 
+    if (user.situacao_sindical !== "FILIADO_SINPRF_ES") {
+      return res.status(403).json({ error: "Acesso restrito a filiados ao SINPRF/ES." });
+    }
+
     const perfil = String(perfilAcesso).toUpperCase();
     const permissoes = rolesConfig[perfil];
 
