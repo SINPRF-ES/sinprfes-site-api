@@ -14,12 +14,12 @@ module.exports = async (req, _res, next) => {
     if (!payload || !payload.id) return next();
 
     const { rows } = await pool.query(
-      "SELECT id, cpf, nome, perfil_acesso, bloqueado, arquivado_em FROM filiados WHERE id = $1 LIMIT 1",
+      "SELECT id, cpf, nome, perfil_acesso, bloqueado, arquivado_em, situacao_sindical FROM filiados WHERE id = $1 LIMIT 1",
       [payload.id]
     );
 
     const userDb = rows[0];
-    if (!userDb || userDb.bloqueado || userDb.arquivado_em) {
+    if (!userDb || userDb.bloqueado || userDb.arquivado_em || userDb.situacao_sindical !== "FILIADO_SINPRF_ES") {
       return next();
     }
 
@@ -28,6 +28,7 @@ module.exports = async (req, _res, next) => {
       cpf: userDb.cpf,
       nome: userDb.nome,
       perfil_acesso: (userDb.perfil_acesso || "FILIADO").toUpperCase(),
+      situacao_sindical: userDb.situacao_sindical,
     };
 
     return next();
@@ -35,4 +36,3 @@ module.exports = async (req, _res, next) => {
     return next();
   }
 };
-

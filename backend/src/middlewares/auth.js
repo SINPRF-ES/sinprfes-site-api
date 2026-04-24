@@ -52,6 +52,7 @@ module.exports = async (req, res, next) => {
       cpf: userDb.cpf,
       nome: userDb.nome,
       perfil_acesso: (userDb.perfil_acesso || "FILIADO").toUpperCase(),
+      situacao_sindical: userDb.situacao_sindical,
     };
 
     return next();

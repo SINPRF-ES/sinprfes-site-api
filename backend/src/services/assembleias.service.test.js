@@ -114,7 +114,7 @@ describe('Assembleias Service', () => {
          .mockResolvedValueOnce({ rows: [] }) // UPDATE quorum anterior
          .mockResolvedValueOnce({ rows: [{ id: 'q1', token: '123456' }] }) // INSERT quorum
          .mockResolvedValueOnce({ rows: [] }) // Audit
-         .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA' }] }) // SELECT user perfil
+         .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA', situacao_sindical: 'FILIADO_SINPRF_ES' }] }) // SELECT user perfil
          .mockResolvedValueOnce({ rows: [{ id: 'c1' }] }) // INSERT checkin
          .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
@@ -142,7 +142,7 @@ describe('Assembleias Service', () => {
          .mockResolvedValueOnce({ rows: [] }) // UPDATE quorum anterior
          .mockResolvedValueOnce({ rows: [{ id: 'q_rec', token: '999999' }] }) // INSERT quorum
          .mockResolvedValueOnce({ rows: [] }) // Audit recontagem
-         .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA' }] }) // SELECT user perfil
+         .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA', situacao_sindical: 'FILIADO_SINPRF_ES' }] }) // SELECT user perfil
          .mockResolvedValueOnce({ rows: [{ id: 'c1' }] }) // INSERT checkin
          .mockResolvedValueOnce({ rows: [] }) // Audit checkin
          .mockResolvedValueOnce({ rows: [] }); // COMMIT
@@ -162,7 +162,13 @@ describe('Assembleias Service', () => {
 
   describe('Blindage and Invariants', () => {
     test('realizarCheckin should block ADMIN or COMUNICADOR', async () => {
-      pool.query.mockResolvedValueOnce({ rows: [{ perfil_acesso: 'ADMIN' }] });
+      pool.query.mockResolvedValueOnce({ rows: [{ perfil_acesso: 'ADMIN', situacao_sindical: 'FILIADO_SINPRF_ES' }] });
+
+      await expect(service.realizarCheckin({ filiado_id: 999 })).rejects.toThrow(Textos.AUTH.PERMISSAO_INSUFICIENTE);
+    });
+
+    test('realizarCheckin should block non-SINPRF_ES sindical status', async () => {
+      pool.query.mockResolvedValueOnce({ rows: [{ perfil_acesso: 'FILIADO', situacao_sindical: 'NAO_FILIADO' }] });
 
       await expect(service.realizarCheckin({ filiado_id: 999 })).rejects.toThrow(Textos.AUTH.PERMISSAO_INSUFICIENTE);
     });
