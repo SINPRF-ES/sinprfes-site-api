@@ -63,13 +63,27 @@ export default function CriarFiliadoScreen({ navigation }: any) {
       return;
     }
 
-    if (!filiado.nome || !filiado.cpf || !filiado.email1 || !filiado.telefone1) {
-      Alert.alert('Erro de Validação', 'Nome, CPF, Email 1 e Telefone 1 são obrigatórios.');
-      return;
-    }
-    if (filiado.cpf.length !== 11) {
-      Alert.alert('Erro de Validação', 'O CPF deve conter 11 dígitos.');
-      return;
+    const situacaoSindical = filiado.situacao_sindical || SITUACAO_SINDICAL.FILIADO_SINPRF_ES;
+    const ehFiliadoEfetivo = situacaoSindical === SITUACAO_SINDICAL.FILIADO_SINPRF_ES;
+
+    if (ehFiliadoEfetivo) {
+      if (!filiado.nome || !filiado.cpf || !filiado.email1 || !filiado.telefone1) {
+        Alert.alert('Erro de Validação', 'Para filiados ao SINPRF/ES, Nome, CPF, Email 1 e Telefone 1 são obrigatórios.');
+        return;
+      }
+      if (filiado.cpf && filiado.cpf.length !== 11) {
+        Alert.alert('Erro de Validação', 'O CPF deve conter 11 dígitos.');
+        return;
+      }
+    } else {
+      if (!filiado.nome) {
+        Alert.alert('Erro de Validação', 'O campo Nome é obrigatório.');
+        return;
+      }
+      if (filiado.cpf && filiado.cpf.length !== 11) {
+        Alert.alert('Erro de Validação', 'O CPF deve conter 11 dígitos.');
+        return;
+      }
     }
 
     for (let i = 1; i <= 5; i++) {
@@ -103,10 +117,10 @@ export default function CriarFiliadoScreen({ navigation }: any) {
       // Normalização
       if (payload.nome) payload.nome = normalizeNome(payload.nome);
       if (payload.sexo === '') payload.sexo = null;
-      payload.cpf = onlyDigits(payload.cpf);
+      payload.cpf = payload.cpf ? onlyDigits(payload.cpf) : null;
       if (payload.siape) payload.siape = onlyDigits(payload.siape).slice(0, 7);
-      payload.telefone1 = onlyDigits(payload.telefone1);
-      payload.telefone2 = onlyDigits(payload.telefone2);
+      payload.telefone1 = payload.telefone1 ? onlyDigits(payload.telefone1) : null;
+      payload.telefone2 = payload.telefone2 ? onlyDigits(payload.telefone2) : null;
       payload.cep = onlyDigits(payload.cep);
 
       if (payload.data_nascimento) {

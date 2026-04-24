@@ -60,6 +60,7 @@ async function getFiliadosAtivosCount(lotacaoKey) {
     FROM filiados
     WHERE situacao = 'ATIVO'
       AND arquivado_em IS NULL
+      AND situacao_sindical = 'FILIADO_SINPRF_ES'
       AND UPPER(lotacao) LIKE $1
   `, [`%${keyword.toUpperCase()}%`]);
 
@@ -71,6 +72,7 @@ async function listarResponsaveis(lotacaoKey = null) {
     SELECT id, nome, cpf, lotacao, perfil_acesso, situacao, arquivado_em
     FROM filiados
     WHERE arquivado_em IS NULL
+      AND situacao_sindical = 'FILIADO_SINPRF_ES'
   `;
   const params = [];
 
@@ -351,6 +353,7 @@ async function getRepasseResumo(ano, options = {}) {
       SELECT id, nome, situacao, lotacao
       FROM filiados
       WHERE arquivado_em IS NULL
+        AND situacao_sindical = 'FILIADO_SINPRF_ES'
         AND UPPER(situacao) IN ('ATIVO', 'VETERANO')
     `),
     pool.query(`

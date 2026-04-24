@@ -436,6 +436,11 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
     conds.push("f.arquivado_em IS NULL");
   }
 
+  // Se não for gestor, só vê filiados reais do SINPRF/ES (Diretório de Membros)
+  if (!isGestao) {
+    conds.push("f.situacao_sindical = 'FILIADO_SINPRF_ES'");
+  }
+
   if (filtro) {
     const termoLimpo = filtro.toLowerCase();
     const termoSemAcento = termoLimpo.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -815,7 +820,8 @@ async function buscarAniversariantesDoDia() {
         f.data_nascimento IS NOT NULL AND
         EXTRACT(DAY FROM f.data_nascimento) = EXTRACT(DAY FROM CURRENT_DATE) AND
         EXTRACT(MONTH FROM f.data_nascimento) = EXTRACT(MONTH FROM CURRENT_DATE) AND
-        f.arquivado_em IS NULL
+        f.arquivado_em IS NULL AND
+        f.situacao_sindical = 'FILIADO_SINPRF_ES'
 
       UNION ALL
 
@@ -836,7 +842,8 @@ async function buscarAniversariantesDoDia() {
         f.dep${i}_data_nascimento IS NOT NULL AND
         EXTRACT(DAY FROM f.dep${i}_data_nascimento) = EXTRACT(DAY FROM CURRENT_DATE) AND
         EXTRACT(MONTH FROM f.dep${i}_data_nascimento) = EXTRACT(MONTH FROM CURRENT_DATE) AND
-        f.arquivado_em IS NULL
+        f.arquivado_em IS NULL AND
+        f.situacao_sindical = 'FILIADO_SINPRF_ES'
       `
         )
         .join(" UNION ALL ")}

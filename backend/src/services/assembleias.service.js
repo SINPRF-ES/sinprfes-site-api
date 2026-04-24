@@ -136,6 +136,7 @@ async function contarFiliadosAtivosParaQuorum(client = null) {
     `SELECT COUNT(*)::INTEGER as total
      FROM filiados
      WHERE arquivado_em IS NULL
+       AND situacao_sindical = 'FILIADO_SINPRF_ES'
        AND perfil_acesso IN ('DIRETORIA', 'FILIADO', 'ORGANIZADOR')`
   );
   return parseInt(rows?.[0]?.total || 0);

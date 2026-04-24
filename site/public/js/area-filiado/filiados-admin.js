@@ -18,6 +18,50 @@
         "DESCONHECIDO"
     ];
 
+    function atualizarObrigatoriedadeCampos(form) {
+        if (!form) return;
+        const situacaoSindical = form.querySelector('[name="situacao_sindical"]')?.value || "FILIADO_SINPRF_ES";
+        const ehFiliadoEfetivo = situacaoSindical === "FILIADO_SINPRF_ES";
+
+        const camposObrigatorios = ["cpf", "email1", "telefone1", "lotacao"];
+
+        // Nome é sempre obrigatório
+        const inputNome = form.querySelector('[name="nome"]');
+        if (inputNome) {
+            inputNome.required = true;
+            const fieldGroup = inputNome.closest('.field-group') || inputNome.closest('.edit-group');
+            const label = fieldGroup?.querySelector('label');
+            if (label && !label.querySelector('.required-mark') && !label.textContent.includes("*")) {
+                label.innerHTML = label.innerHTML.trim() + " <span class=\"required-mark\" style=\"color:red;\">*</span>";
+            }
+        }
+
+        camposObrigatorios.forEach(name => {
+            const input = form.querySelector(`[name="${name}"]`);
+            if (!input) return;
+
+            const fieldGroup = input.closest(".field-group") || input.closest(".edit-group");
+            const label = fieldGroup?.querySelector("label");
+
+            if (ehFiliadoEfetivo) {
+                input.required = true;
+                if (label && !label.querySelector(".required-mark") && !label.textContent.includes("*")) {
+                    label.innerHTML = label.innerHTML.trim() + " <span class=\"required-mark\" style=\"color:red;\">*</span>";
+                }
+            } else {
+                input.required = false;
+                if (label) {
+                    const mark = label.querySelector(".required-mark");
+                    if (mark) mark.remove();
+                    // Also handles hardcoded *
+                    if (label.textContent.includes(" *")) {
+                        label.innerHTML = label.innerHTML.replace(" *", "");
+                    }
+                }
+            }
+        });
+    }
+
     const LOTACAO_OPCOES = global.Canon?.LOTACOES || [
       "SEDE",
       "DEL 01 - Viana",
@@ -537,6 +581,12 @@
 
         const filiado = cacheLista.find(f => f.id == id);
 
+        const situacaoSelect = form.querySelector('[name="situacao_sindical"]');
+        if (situacaoSelect) {
+            situacaoSelect.onchange = () => atualizarObrigatoriedadeCampos(form);
+            atualizarObrigatoriedadeCampos(form);
+        }
+
         if (gerarCamposDependentes) {
             const container = document.getElementById("modal-dependentes-container");
             gerarCamposDependentes(container, "mod");
@@ -738,10 +788,15 @@
                 payload[key] = val;
             });
 
+            const situacaoFinal = payload.situacao_sindical || (filiado && filiado.situacao_sindical) || "FILIADO_SINPRF_ES";
+            const ehFiliadoEfetivo = situacaoFinal === "FILIADO_SINPRF_ES";
+
             // Validação final de campos críticos se presentes
-            if (payload.cpf && payload.cpf.length !== 11) {
-                alert("O CPF deve ter exatamente 11 dígitos.");
-                return;
+            if (payload.cpf || ehFiliadoEfetivo) {
+                if (payload.cpf && payload.cpf.length !== 11) {
+                    alert("O CPF deve ter exatamente 11 dígitos.");
+                    return;
+                }
             }
 
             try {
@@ -843,7 +898,7 @@
                     <div class="ui-card">
                         <div class="field-row">
                             <div class="field-group">
-                                <label>Nome *</label>
+                                <label>Nome</label>
                                 <input class="ui-input" name="nome" required>
                             </div>
                             <div class="field-group">
@@ -857,22 +912,27 @@
                         </div>
                         <div class="field-row">
                             <div class="field-group">
-                                <label>CPF *</label>
-                                <input class="ui-input" name="cpf" required placeholder="000.000.000-00">
+                                <label>Situação Sindical</label>
+                                <select class="ui-select" name="situacao_sindical" required style="border: 2px solid var(--primary-color);">
+                                    ${SITUACAO_SINDICAL_OPCOES.map(op => {
+                                        const label = global.Canon?.SITUACAO_SINDICAL_LABELS?.[op] || op;
+                                        return `<option value="${op}" ${op === "FILIADO_SINPRF_ES" ? "selected" : ""}>${label}</option>`;
+                                    }).join("")}
+                                </select>
                             </div>
                             <div class="field-group">
-                                <label>Matrícula (SIAPE)</label>
-                                <input class="ui-input" name="siape" placeholder="6 ou 7 dígitos" maxlength="7">
+                                <label>CPF</label>
+                                <input class="ui-input" name="cpf" placeholder="000.000.000-00">
                             </div>
                         </div>
                         <div class="field-row">
                             <div class="field-group">
-                                <label>Email *</label>
-                                <input class="ui-input" type="email" name="email1" required>
+                                <label>Email</label>
+                                <input class="ui-input" type="email" name="email1">
                             </div>
                             <div class="field-group">
-                                <label>Telefone 1 *</label>
-                                <input class="ui-input campo-telefone" name="telefone1" required placeholder="(00) 00000-0000">
+                                <label>Telefone 1</label>
+                                <input class="ui-input campo-telefone" name="telefone1" placeholder="(00) 00000-0000">
                             </div>
                         </div>
                         <div class="field-row">
@@ -881,8 +941,8 @@
                                 <input class="ui-input campo-telefone" name="telefone2" placeholder="(00) 00000-0000">
                             </div>
                             <div class="field-group">
-                                <label>Lotação *</label>
-                                <select class="ui-select" name="lotacao" required style="border: 2px solid var(--primary-color);">
+                                <label>Lotação</label>
+                                <select class="ui-select" name="lotacao" style="border: 2px solid var(--primary-color);">
                                     <option value="">Selecione a Lotação...</option>
                                     ${LOTACAO_OPCOES.map(op => `<option value="${op}">${op}</option>`).join("")}
                                 </select>
@@ -893,7 +953,10 @@
                                 <label>Data Nascimento</label>
                                 <input class="ui-input campo-data" name="data_nascimento" placeholder="DD/MM/AAAA">
                             </div>
-                            <div class="field-group"></div>
+                            <div class="field-group">
+                                <label>Matrícula (SIAPE)</label>
+                                <input class="ui-input" name="siape" placeholder="6 ou 7 dígitos" maxlength="7">
+                            </div>
                         </div>
                     </div>
 
@@ -944,6 +1007,12 @@
 
         const form = container.querySelector("#form-novo-filiado-admin");
 
+        const situacaoSelect = form.querySelector('[name="situacao_sindical"]');
+        if (situacaoSelect) {
+            situacaoSelect.onchange = () => atualizarObrigatoriedadeCampos(form);
+            atualizarObrigatoriedadeCampos(form);
+        }
+
         // Aplicar Máscaras
         if (aplicarMascaraCPF) aplicarMascaraCPF(form.querySelector('input[name="cpf"]'));
         if (aplicarMascaraTelefone) {
@@ -989,13 +1058,19 @@
 
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
 
+            const ehFiliadoEfetivo = payload.situacao_sindical === "FILIADO_SINPRF_ES";
+
             // Validação e Sanitização CPF
-            const cpfLimp = onlyDigits(payload.cpf);
-            if (cpfLimp.length !== 11) {
-                alert("O CPF deve ter exatamente 11 dígitos.");
-                return;
+            if (ehFiliadoEfetivo || (payload.cpf && onlyDigits(payload.cpf).length > 0)) {
+                const cpfLimp = onlyDigits(payload.cpf);
+                if (cpfLimp.length !== 11) {
+                    alert("O CPF deve ter exatamente 11 dígitos.");
+                    return;
+                }
+                payload.cpf = cpfLimp;
+            } else {
+                payload.cpf = null;
             }
-            payload.cpf = cpfLimp;
 
             // Sanitização Telefone
             const normalizeTel = (v) => {
@@ -1006,9 +1081,11 @@
             payload.telefone2 = normalizeTel(payload.telefone2);
 
             // Validação explícita de lotação (Task C)
-            if (!payload.lotacao || payload.lotacao.trim() === "" || payload.lotacao === "Selecione a Lotação...") {
-                alert("Lotação é obrigatória. Por favor, selecione uma opção.");
-                return;
+            if (ehFiliadoEfetivo) {
+                if (!payload.lotacao || payload.lotacao.trim() === "" || payload.lotacao === "Selecione a Lotação...") {
+                    alert("Lotação é obrigatória para filiados ao SINPRF/ES.");
+                    return;
+                }
             }
 
             // Conversão Data de Nascimento para ISO

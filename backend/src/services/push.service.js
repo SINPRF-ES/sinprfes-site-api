@@ -42,14 +42,17 @@ function buildResolveTargetClause(targetType, targetValue, startIndex = 1) {
     case "ATIVOS":
       joins = "JOIN filiados f ON pt.user_id = f.id";
       conditions.push("f.situacao = 'ATIVO'");
+      conditions.push("f.situacao_sindical = 'FILIADO_SINPRF_ES'");
       break;
     case "VETERANOS":
       joins = "JOIN filiados f ON pt.user_id = f.id";
       conditions.push("(f.situacao = 'VETERANO' OR f.situacao = 'PENSIONISTA')");
+      conditions.push("f.situacao_sindical = 'FILIADO_SINPRF_ES'");
       break;
     case "LOTACAO":
       joins = "JOIN filiados f ON pt.user_id = f.id";
       conditions.push("f.situacao = 'ATIVO'");
+      conditions.push("f.situacao_sindical = 'FILIADO_SINPRF_ES'");
       conditions.push(`f.lotacao = $${startIndex + params.length}`);
       params.push(targetValue);
       break;
@@ -414,13 +417,13 @@ async function countNoTokenTargets(targetType, targetValue) {
 
   switch (targetType) {
     case "ATIVOS":
-      filiadosSql = "SELECT id FROM filiados WHERE situacao = 'ATIVO'";
+      filiadosSql = "SELECT id FROM filiados WHERE situacao = 'ATIVO' AND situacao_sindical = 'FILIADO_SINPRF_ES'";
       break;
     case "VETERANOS":
-      filiadosSql = "SELECT id FROM filiados WHERE situacao = 'VETERANO' OR situacao = 'PENSIONISTA'";
+      filiadosSql = "SELECT id FROM filiados WHERE (situacao = 'VETERANO' OR situacao = 'PENSIONISTA') AND situacao_sindical = 'FILIADO_SINPRF_ES'";
       break;
     case "LOTACAO":
-      filiadosSql = "SELECT id FROM filiados WHERE situacao = 'ATIVO' AND lotacao = $1";
+      filiadosSql = "SELECT id FROM filiados WHERE situacao = 'ATIVO' AND lotacao = $1 AND situacao_sindical = 'FILIADO_SINPRF_ES'";
       params = [targetValue];
       break;
     case "FILIADO": {
@@ -431,7 +434,7 @@ async function countNoTokenTargets(targetType, targetValue) {
     }
     case "ALL":
     default:
-      filiadosSql = "SELECT id FROM filiados WHERE situacao IN ('ATIVO', 'VETERANO', 'PENSIONISTA')";
+      filiadosSql = "SELECT id FROM filiados WHERE situacao IN ('ATIVO', 'VETERANO', 'PENSIONISTA') AND situacao_sindical = 'FILIADO_SINPRF_ES'";
       break;
   }
 

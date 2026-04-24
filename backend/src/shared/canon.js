@@ -34,6 +34,7 @@
     ARQUIVADO: 'ARQUIVADO'
   };
 
+  // 2.1 Situação Sindical (Dimensão Cadastral)
   const SITUACAO_SINDICAL = {
     FILIADO_SINPRF_ES: 'FILIADO_SINPRF_ES',
     FILIADO_OUTRO_SINDICATO: 'FILIADO_OUTRO_SINDICATO',
@@ -211,7 +212,7 @@
    * Normaliza nomes para Title Case por palavra, preservando hífens e apóstrofos.
    * Regra: JOÃO DA SILVA -> João Da Silva; joÃO -> João
    * @param {string} input - Nome a ser normalizado.
-   * @returns {string|null} - Nome normalizado ou null.
+   * @returns {string|null} - Nome normalizado or null.
    */
   function normalizeNome(input) {
     if (!input || typeof input !== 'string') return input || null;
@@ -225,6 +226,15 @@
     // 2) Title Case por "palavra", preservando separadores: espaço, hífen e apóstrofo
     // Regex: início da string OU separador, seguido de um caractere alfabético
     return s.replace(/(^|[ \-'])[a-zà-ÿ]/g, (m) => m.toLocaleUpperCase("pt-BR"));
+  }
+
+  /**
+   * Verifica se o perfil informado possui acesso de gestão.
+   * Centraliza a regra de negócio para Backend e Frontend.
+   */
+  function ehPerfilGestao(perfil) {
+    const p = normalizePerfil(perfil);
+    return [PERFIL_ACESSO.ADMIN, PERFIL_ACESSO.DIRETORIA, PERFIL_ACESSO.FUNCIONARIO].includes(p);
   }
 
   return {
@@ -250,13 +260,4 @@
     ME_EDITABLE_FIELDS_FILIADO,
     ME_EDITABLE_FIELDS_GESTAO
   };
-
-  /**
-   * Verifica se o perfil informado possui acesso de gestão.
-   * Centraliza a regra de negócio para Backend e Frontend.
-   */
-  function ehPerfilGestao(perfil) {
-    const p = normalizePerfil(perfil);
-    return [PERFIL_ACESSO.ADMIN, PERFIL_ACESSO.DIRETORIA, PERFIL_ACESSO.FUNCIONARIO].includes(p);
-  }
 }));

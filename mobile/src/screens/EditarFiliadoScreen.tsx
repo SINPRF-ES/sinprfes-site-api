@@ -82,9 +82,19 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
       return;
     }
 
-    if (!filiado.nome || !filiado.cpf || !filiado.email1) {
-      Alert.alert('Erro de Validação', 'Nome, CPF e Email 1 são obrigatórios.');
-      return;
+    const situacaoSindical = filiado.situacao_sindical || 'FILIADO_SINPRF_ES';
+    const ehFiliadoEfetivo = situacaoSindical === 'FILIADO_SINPRF_ES';
+
+    if (ehFiliadoEfetivo) {
+      if (!filiado.nome || !filiado.cpf || !filiado.email1) {
+        Alert.alert('Erro de Validação', 'Para filiados ao SINPRF/ES, Nome, CPF e Email 1 são obrigatórios.');
+        return;
+      }
+    } else {
+      if (!filiado.nome) {
+        Alert.alert('Erro de Validação', 'O campo Nome é obrigatório.');
+        return;
+      }
     }
 
     try {
