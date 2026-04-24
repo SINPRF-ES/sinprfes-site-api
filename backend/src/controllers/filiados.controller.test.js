@@ -131,4 +131,103 @@ describe('Filiados Controller', () => {
       }));
     });
   });
+
+  describe('atualizarMeusDados (Regressions & Task B2)', () => {
+    test('should allow gestor to update situacao_sindical and uf_sindicato_externo for themselves', async () => {
+      req.user = { id: 1, perfil_acesso: 'ADMIN' };
+      req.body = {
+        email1: 'admin@test.com',
+        situacao_sindical: 'FILIADO_OUTRO_SINDICATO',
+        uf_sindicato_externo: 'RJ'
+      };
+      service.buscarPorId.mockResolvedValue({ id: 1, situacao_sindical: 'FILIADO_SINPRF_ES' });
+      service.atualizarDadosProprios.mockResolvedValue({ id: 1 });
+
+      await controller.atualizarMeusDados(req, res);
+
+      expect(service.atualizarDadosProprios).toHaveBeenCalledWith(1, expect.objectContaining({
+        situacao_sindical: 'FILIADO_OUTRO_SINDICATO',
+        uf_sindicato_externo: 'RJ'
+      }));
+    });
+
+    test('should reject ES for gestor in atualizarMeusDados', async () => {
+      req.user = { id: 1, perfil_acesso: 'ADMIN' };
+      req.body = {
+        email1: 'admin@test.com',
+        situacao_sindical: 'FILIADO_OUTRO_SINDICATO',
+        uf_sindicato_externo: 'ES'
+      };
+      service.buscarPorId.mockResolvedValue({ id: 1, situacao_sindical: 'FILIADO_SINPRF_ES' });
+
+      await controller.atualizarMeusDados(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(422);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        error: "VALIDATION_ERROR"
+      }));
+    });
+
+    test('should NOT clear uf_sindicato_externo if not provided and situation remains FILIADO_OUTRO_SINDICATO', async () => {
+      req.user = { id: 1, perfil_acesso: 'ADMIN' };
+      req.body = { email1: 'admin@test.com' }; // uf_sindicato_externo is undefined
+      service.buscarPorId.mockResolvedValue({
+        id: 1,
+        situacao_sindical: 'FILIADO_OUTRO_SINDICATO',
+        uf_sindicato_externo: 'MG'
+      });
+      service.atualizarDadosProprios.mockResolvedValue({ id: 1 });
+
+      await controller.atualizarMeusDados(req, res);
+
+      // Should NOT be in the payload sent to service if undefined in controller body
+      const callArgs = service.atualizarDadosProprios.mock.calls[0][1];
+      expect(callArgs.uf_sindicato_externo).toBeUndefined();
+    });
+
+    test('should clear uf_sindicato_externo if situation changes from FILIADO_OUTRO_SINDICATO', async () => {
+      req.user = { id: 1, perfil_acesso: 'ADMIN' };
+      req.body = {
+        email1: 'admin@test.com',
+        situacao_sindical: 'FILIADO_SINPRF_ES'
+      };
+      service.buscarPorId.mockResolvedValue({
+        id: 1,
+        nome: 'Admin User',
+        cpf: '12345678901',
+        telefone1: '27999999999',
+        lotacao: 'SEDE',
+        situacao_sindical: 'FILIADO_OUTRO_SINDICATO',
+        uf_sindicato_externo: 'MG'
+      });
+      service.atualizarDadosProprios.mockResolvedValue({ id: 1 });
+
+      await controller.atualizarMeusDados(req, res);
+
+      expect(service.atualizarDadosProprios).toHaveBeenCalledWith(1, expect.objectContaining({
+        situacao_sindical: 'FILIADO_SINPRF_ES',
+        uf_sindicato_externo: null
+      }));
+    });
+  });
+
+  describe('atualizarFiliado Persistence Bug', () => {
+    test('should NOT clear uf_sindicato_externo if not in body and situation remains same', async () => {
+      req.user = { id: 1, perfil_acesso: 'DIRETORIA' };
+      req.params.id = '10';
+      req.body = { nome: 'Novo Nome' }; // uf_sindicato_externo is undefined
+      service.buscarPorId.mockResolvedValue({
+        id: 10,
+        nome: 'Teste',
+        situacao_sindical: 'FILIADO_OUTRO_SINDICATO',
+        uf_sindicato_externo: 'RJ'
+      });
+      service.atualizarFiliadoPorId.mockResolvedValue({ id: 10 });
+
+      await controller.atualizarFiliado(req, res);
+
+      const callArgs = service.atualizarFiliadoPorId.mock.calls[0][1];
+      expect(callArgs.uf_sindicato_externo).toBeUndefined();
+    });
+  });
 });

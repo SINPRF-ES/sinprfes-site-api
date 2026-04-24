@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, Button, StyleSheet, Alert, ScrollView, ActivityIndicator, TextInput } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { useNetInfo } from '@react-native-community/netinfo';
+import { validarUfSindicatoExterno } from '../utils/canon';
 import { buildUpdateFiliadoPayload } from '../services/filiadoPayloadMapper';
 import { atualizarFiliado, arquivarFiliado, desarquivarFiliado } from '../services/apiService';
 import { getMe, getFiliadoById } from '../services/filiadoService';
@@ -84,8 +85,10 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
 
     const situacaoSindical = filiado.situacao_sindical || 'FILIADO_SINPRF_ES';
     const ehFiliadoEfetivo = situacaoSindical === 'FILIADO_SINPRF_ES';
-    if (situacaoSindical === 'FILIADO_OUTRO_SINDICATO' && (filiado.uf_sindicato_externo || '').toUpperCase() === 'ES') {
-      Alert.alert('Erro de Validação', 'Para filiação a outro sindicato, a UF do sindicato externo não pode ser ES.');
+
+    const validacaoUfExterna = validarUfSindicatoExterno(filiado.uf_sindicato_externo, situacaoSindical);
+    if (!validacaoUfExterna.ok) {
+      Alert.alert('Erro de Validação', validacaoUfExterna.message);
       return;
     }
 

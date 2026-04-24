@@ -194,6 +194,37 @@
   }
 
   /**
+   * Valida se a UF é permitida para a situação sindical.
+   * Centraliza a regra: FILIADO_OUTRO_SINDICATO permite qualquer UF brasileira EXCETO ES.
+   * Para as demais situações, a UF deve ser nula.
+   */
+  function validarUfSindicatoExterno(ufRaw, situacaoSindical) {
+    const ss = normalizeSituacaoSindical(situacaoSindical, null);
+
+    if (ss !== SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO) {
+      return { ok: true, value: null };
+    }
+
+    if (ufRaw === undefined) {
+      return { ok: true, value: undefined };
+    }
+
+    if (ufRaw === null || String(ufRaw).trim() === "") {
+      return { ok: true, value: null };
+    }
+
+    const ufNorm = normalizeUfBrasileira(ufRaw);
+    if (!ufNorm) {
+      return { ok: false, message: "UF do sindicato externo inválida." };
+    }
+    if (ufNorm === 'ES') {
+      return { ok: false, message: "UF do sindicato externo não pode ser ES para FILIADO_OUTRO_SINDICATO." };
+    }
+
+    return { ok: true, value: ufNorm };
+  }
+
+  /**
    * Normaliza o Estado do Cadastro.
    */
   function normalizeEstadoCadastro(val) {
@@ -272,6 +303,7 @@
     normalizeSituacaoSindical,
     normalizeUfBrasileira,
     isUfBrasileiraValida,
+    validarUfSindicatoExterno,
     normalizeEstadoCadastro,
     normalizeLotacao,
     normalizeNome,
