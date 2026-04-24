@@ -61,6 +61,14 @@ exports.login = async (req, res) => {
           .json({ error: Textos.AUTH.CADASTRO_INATIVO, requestId });
     }
 
+    // Verificação de Situação Sindical (Apenas FILIADO_SINPRF_ES pode logar)
+    if (filiado.situacao_sindical !== "FILIADO_SINPRF_ES") {
+      log.warn("AuthLoginBloqueado", { cpf: cpfNormalizado, status: filiado.situacao_sindical, requestId });
+      return res
+        .status(403)
+        .json({ error: "Acesso permitido apenas para filiados ao SINPRF/ES.", requestId });
+    }
+
     const senhaOk = await bcrypt.compare(senha, filiado.senha_hash);
 
     if (!senhaOk) {
@@ -182,8 +190,8 @@ exports.refresh = async (req, res) => {
     }
 
     const filiado = await buscarPorId(tokenRecord.filiado_id);
-    if (!filiado || filiado.arquivado_em) {
-      return res.status(401).json({ error: "Usuário inativo ou não encontrado.", requestId });
+    if (!filiado || filiado.arquivado_em || filiado.situacao_sindical !== "FILIADO_SINPRF_ES") {
+      return res.status(401).json({ error: "Usuário inativo, não filiado ou não encontrado.", requestId });
     }
 
     // Gera novo Access Token

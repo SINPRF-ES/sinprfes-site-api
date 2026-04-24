@@ -72,10 +72,10 @@ async function buscarDadosAgregados(tipo, valor) {
         "NENHUMA": "NENHUMA"
     };
     const kw = keywords[valor] || valor;
-    whereClause += " AND UPPER(lotacao) LIKE $1 AND situacao = 'ATIVO'";
+    whereClause += " AND UPPER(lotacao) LIKE $1 AND situacao = 'ATIVO' AND situacao_sindical = 'FILIADO_SINPRF_ES'";
     params.push(`%${kw.toUpperCase()}%`);
   } else if (tipo === "SITUACAO") {
-    whereClause += " AND situacao = $1";
+    whereClause += " AND situacao = $1 AND situacao_sindical = 'FILIADO_SINPRF_ES'";
     params.push(valor);
   }
 
@@ -193,7 +193,7 @@ async function buscarDadosGlobal() {
         COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) BETWEEN 70 AND 79)::INTEGER as range_70_79,
         COUNT(*) FILTER (WHERE data_nascimento IS NOT NULL AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_nascimento)) >= 80)::INTEGER as range_80_plus
       FROM filiados
-      WHERE situacao = 'VETERANO' AND arquivado_em IS NULL
+      WHERE situacao = 'VETERANO' AND arquivado_em IS NULL AND situacao_sindical = 'FILIADO_SINPRF_ES'
     `),
     // PENSIONISTA (Apenas sexo)
     pool.query(`
@@ -202,7 +202,7 @@ async function buscarDadosGlobal() {
         COUNT(*) FILTER (WHERE sexo = 'M')::INTEGER as masc,
         COUNT(*) FILTER (WHERE sexo = 'F')::INTEGER as fem
       FROM filiados
-      WHERE situacao = 'PENSIONISTA' AND arquivado_em IS NULL
+      WHERE situacao = 'PENSIONISTA' AND arquivado_em IS NULL AND situacao_sindical = 'FILIADO_SINPRF_ES'
     `)
   ]);
 

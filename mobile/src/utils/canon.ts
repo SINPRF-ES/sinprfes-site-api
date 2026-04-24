@@ -203,7 +203,7 @@ export function normalizeLotacao(val: string | null | undefined): string {
   if (s.includes('LINHARES')) return "DEL 04 - Linhares";
   if (s.includes('SEDE')) return "SEDE";
 
-  return 'SEDE'; // Fallback seguro
+  return 'SEDE';
 }
 
 /**
@@ -221,4 +221,12 @@ export function normalizeNome(input?: string | null): string | null {
 
   // 2) Title Case por "palavra", preservando separadores: espaço, hífen e apóstrofo
   return s.replace(/(^|[ \-'])[a-zà-ÿ]/g, (m) => m.toLocaleUpperCase("pt-BR"));
+}
+
+/**
+ * Verifica se o perfil informado possui acesso de gestão.
+ */
+export function ehPerfilGestao(perfil: string | null | undefined): boolean {
+  const p = normalizePerfil(perfil);
+  return [PERFIL_ACESSO.ADMIN, PERFIL_ACESSO.DIRETORIA, PERFIL_ACESSO.FUNCIONARIO].includes(p);
 }

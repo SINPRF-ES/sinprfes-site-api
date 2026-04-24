@@ -29,7 +29,7 @@ describe('Auth Controller - Refresh Flow', () => {
   test('login should return refreshToken', async () => {
     req.body = { cpf: '123', senha: 'password' };
 
-    filiadosService.buscarPorCpf.mockResolvedValue({ id: 1, cpf: '123', senha_hash: 'hashed' });
+    filiadosService.buscarPorCpf.mockResolvedValue({ id: 1, cpf: '123', senha_hash: 'hashed', situacao_sindical: 'FILIADO_SINPRF_ES' });
     bcrypt.compare.mockResolvedValue(true);
     authService.createRefreshToken.mockResolvedValue('token-123');
 
@@ -43,7 +43,7 @@ describe('Auth Controller - Refresh Flow', () => {
   test('refresh should return new tokens', async () => {
     req.body = { refreshToken: 'old-token' };
     authService.verifyRefreshToken.mockResolvedValue({ id: 'uuid-old', filiado_id: 1 });
-    filiadosService.buscarPorId.mockResolvedValue({ id: 1, nome: 'Test' });
+    filiadosService.buscarPorId.mockResolvedValue({ id: 1, nome: 'Test', situacao_sindical: 'FILIADO_SINPRF_ES' });
     authService.rotateRefreshToken.mockResolvedValue('new-token');
 
     await authController.refresh(req, res);
@@ -61,5 +61,22 @@ describe('Auth Controller - Refresh Flow', () => {
     await authController.refresh(req, res);
 
     expect(res.status).toHaveBeenCalledWith(401);
+  });
+
+  test('login should return 403 for non-SINPRF_ES situacao_sindical', async () => {
+    req.body = { cpf: '123', senha: 'password' };
+    filiadosService.buscarPorCpf.mockResolvedValue({
+      id: 1,
+      cpf: '123',
+      senha_hash: 'hashed',
+      situacao_sindical: 'NAO_FILIADO'
+    });
+
+    await authController.login(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      error: 'Acesso permitido apenas para filiados ao SINPRF/ES.'
+    }));
   });
 });

@@ -562,6 +562,33 @@ exports.atualizarFiliado = async (req, res) => {
       payload.situacao_sindical = situacaoSindical;
     }
 
+    const alvo = await buscarPorId(idAlvo);
+    if (!alvo) {
+      return res.status(404).json({ success: false, message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO, requestId });
+    }
+
+    const situacaoFinal = payload.situacao_sindical || alvo.situacao_sindical;
+    if (situacaoFinal === SITUACAO_SINDICAL.FILIADO_SINPRF_ES) {
+      const nomeFinal = payload.nome !== undefined ? payload.nome : alvo.nome;
+      const cpfFinal = payload.cpf !== undefined ? payload.cpf : alvo.cpf;
+      const emailFinal = payload.email1 !== undefined ? payload.email1 : alvo.email1;
+      const telefoneFinal = payload.telefone1 !== undefined ? payload.telefone1 : alvo.telefone1;
+      const lotacaoFinal = payload.lotacao !== undefined ? payload.lotacao : alvo.lotacao;
+
+      if (!nomeFinal || !cpfFinal || !emailFinal || !telefoneFinal || !lotacaoFinal) {
+        return res.status(400).json({
+          success: false,
+          message: "Para filiados ao SINPRF/ES, os campos Nome, CPF, E-mail, Telefone e Lotação são obrigatórios.",
+          requestId
+        });
+      }
+    } else {
+      const nomeFinal = payload.nome !== undefined ? payload.nome : alvo.nome;
+      if (!nomeFinal) {
+        return res.status(400).json({ success: false, message: "O nome é obrigatório.", requestId });
+      }
+    }
+
     const atualizado = await atualizarFiliadoPorId(idAlvo, payload);
     if (!atualizado) return res.status(404).json({ success: false, message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO, requestId });
 
@@ -598,17 +625,31 @@ exports.criarFiliado = async (req, res) => {
     }
 
     const body = req.body || {};
-    if (!body.nome || !body.cpf || !body.email1 || !body.telefone1) {
-      return res.status(400).json({ success: false, message: Textos.FILIADOS.CAMPOS_OBRIGATORIOS, requestId });
+
+    const situacaoSindical = normalizeSituacaoSindical(body.situacao_sindical, SITUACAO_SINDICAL.FILIADO_SINPRF_ES);
+    if (!situacaoSindical || !isSituacaoSindicalValida(situacaoSindical)) {
+      return res.status(400).json({ success: false, message: "Situação sindical inválida.", requestId });
     }
 
-    if (!body.lotacao || String(body.lotacao).trim() === "" || body.lotacao === "Selecione a Lotação...") {
-      return res.status(422).json({
-        success: false,
-        message: "Selecione a lotação",
-        fields: { lotacao: "Selecione a lotação" },
-        requestId
-      });
+    const ehFiliadoEfetivo = situacaoSindical === SITUACAO_SINDICAL.FILIADO_SINPRF_ES;
+
+    if (ehFiliadoEfetivo) {
+      if (!body.nome || !body.cpf || !body.email1 || !body.telefone1) {
+        return res.status(400).json({ success: false, message: Textos.FILIADOS.CAMPOS_OBRIGATORIOS, requestId });
+      }
+
+      if (!body.lotacao || String(body.lotacao).trim() === "" || body.lotacao === "Selecione a Lotação...") {
+        return res.status(422).json({
+          success: false,
+          message: "Selecione a lotação",
+          fields: { lotacao: "Selecione a lotação" },
+          requestId
+        });
+      }
+    } else {
+      if (!body.nome || String(body.nome).trim() === "") {
+        return res.status(400).json({ success: false, message: "O nome é obrigatório para qualquer situação sindical.", requestId });
+      }
     }
 
     if (body.siape) {
@@ -625,15 +666,17 @@ exports.criarFiliado = async (req, res) => {
       }
     }
 
-    const cpfLimpo = normalizarCpf(body.cpf);
-    if (cpfLimpo.length !== 11) {
-      return res.status(400).json({ success: false, message: "CPF inválido (deve ter 11 dígitos).", requestId });
-    }
+    if (body.cpf) {
+      const cpfLimpo = normalizarCpf(body.cpf);
+      if (cpfLimpo.length !== 11) {
+        return res.status(400).json({ success: false, message: "CPF inválido (deve ter 11 dígitos).", requestId });
+      }
 
-    const checkCpf = await pool.query("SELECT nome FROM filiados WHERE cpf = $1 LIMIT 1", [cpfLimpo]);
+      const checkCpf = await pool.query("SELECT nome FROM filiados WHERE cpf = $1 LIMIT 1", [cpfLimpo]);
 
-    if (checkCpf.rows.length > 0) {
-      return res.status(409).json({ success: false, message: `CPF já pertence ao filiado: ${checkCpf.rows[0].nome}.`, requestId });
+      if (checkCpf.rows.length > 0) {
+        return res.status(409).json({ success: false, message: `CPF já pertence ao filiado: ${checkCpf.rows[0].nome}.`, requestId });
+      }
     }
 
     const dependentesArray = validarESanitizarDependentes(body);
@@ -650,18 +693,16 @@ exports.criarFiliado = async (req, res) => {
     const dadosNovo = {
       nome: String(body.nome).trim(),
       sexo: body.sexo ? normalizeSexo(body.sexo) : null,
-      cpf: cpfLimpo,
+      cpf: body.cpf ? normalizarCpf(body.cpf) : null,
       siape: body.siape ? String(body.siape).replace(/\D/g, "").slice(0, 7) : null,
       data_nascimento: parseDateToISO(body.data_nascimento),
-      telefone1: normalizeTelefone(body.telefone1),
+      telefone1: body.telefone1 ? normalizeTelefone(body.telefone1) : null,
       telefone2: (body.telefone2 !== undefined && body.telefone2 !== "") ? normalizeTelefone(body.telefone2) : null,
       email1: body.email1 || null,
       email2: body.email2 || null,
-      lotacao: normalizeLotacao(body.lotacao),
+      lotacao: body.lotacao ? normalizeLotacao(body.lotacao) : (ehFiliadoEfetivo ? "SEDE" : "NENHUMA"),
       situacao: normalizeSituacaoFuncional(body.situacao || "ATIVO"),
-      situacao_sindical: body.situacao_sindical
-        ? normalizeSituacaoSindical(body.situacao_sindical, null)
-        : SITUACAO_SINDICAL.FILIADO_SINPRF_ES,
+      situacao_sindical: situacaoSindical,
       perfil_acesso: normalizePerfil(body.perfil_acesso || "FILIADO"),
       logradouro_bairro: body.logradouro_bairro || null,
       numero: body.numero || null,
@@ -672,9 +713,6 @@ exports.criarFiliado = async (req, res) => {
       ...dadosDependentes,
     };
 
-    if (!dadosNovo.situacao_sindical) {
-      return res.status(400).json({ success: false, message: "Situação sindical inválida.", requestId });
-    }
 
     const novo = await criarFiliadoInicial(dadosNovo, perfilCriador);
 

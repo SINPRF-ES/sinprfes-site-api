@@ -25,7 +25,7 @@ module.exports = async (req, res, next) => {
     }
 
     const { rows } = await pool.query(
-      "SELECT id, cpf, nome, perfil_acesso, bloqueado, arquivado_em FROM filiados WHERE id = $1 LIMIT 1",
+      "SELECT id, cpf, nome, perfil_acesso, bloqueado, arquivado_em, situacao_sindical FROM filiados WHERE id = $1 LIMIT 1",
       [payload.id]
     );
 
@@ -41,6 +41,10 @@ module.exports = async (req, res, next) => {
 
     if (userDb.arquivado_em) {
       return res.status(403).json({ error: Textos.AUTH.CADASTRO_INATIVO, requestId });
+    }
+
+    if (userDb.situacao_sindical !== "FILIADO_SINPRF_ES") {
+      return res.status(403).json({ error: "Acesso restrito a filiados ao SINPRF/ES.", requestId });
     }
 
     req.user = {
