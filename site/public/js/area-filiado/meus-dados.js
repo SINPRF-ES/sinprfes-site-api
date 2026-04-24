@@ -181,7 +181,8 @@
                 .profile-name-title {
                     margin: 0;
                     font-size: 2rem;
-                    color: var(--amarelo);
+                    color: #fff;
+                    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
                     font-weight: 800;
                 }
                 .profile-badges { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }

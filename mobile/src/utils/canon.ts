@@ -36,6 +36,14 @@ export const SITUACAO_SINDICAL = {
 
 export type SituacaoSindical = typeof SITUACAO_SINDICAL[keyof typeof SITUACAO_SINDICAL];
 
+export const UFS_BRASILEIRAS = [
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS',
+  'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC',
+  'SP', 'SE', 'TO'
+] as const;
+
+export type UfBrasileira = typeof UFS_BRASILEIRAS[number];
+
 // 3. Perfis de Acesso
 export const PERFIL_ACESSO = {
   ADMIN: 'ADMIN',
@@ -82,7 +90,8 @@ for (let i = 1; i <= 5; i++) {
 
 export const ME_EDITABLE_FIELDS_GESTAO = [
   ...ME_EDITABLE_FIELDS_FILIADO,
-  'nome', 'cpf', 'siape', 'sexo', 'data_nascimento', 'situacao'
+  'nome', 'cpf', 'siape', 'sexo', 'data_nascimento', 'situacao',
+  'situacao_sindical', 'uf_sindicato_externo'
 ];
 
 // Mapeamento para labels de exibição
@@ -173,6 +182,17 @@ export function normalizeSituacaoSindical(
   }
 
   return null;
+}
+
+export function isUfBrasileiraValida(val: string | null | undefined): val is UfBrasileira {
+  if (!val) return false;
+  return UFS_BRASILEIRAS.includes(slugify(val) as UfBrasileira);
+}
+
+export function normalizeUfBrasileira(val: string | null | undefined): UfBrasileira | null {
+  const s = slugify(val);
+  if (!s) return null;
+  return isUfBrasileiraValida(s) ? (s as UfBrasileira) : null;
 }
 
 /**

@@ -42,6 +42,12 @@
     DESCONHECIDO: 'DESCONHECIDO'
   };
 
+  const UFS_BRASILEIRAS = [
+    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS',
+    'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC',
+    'SP', 'SE', 'TO'
+  ];
+
   // 3. Perfis de Acesso
   const PERFIL_ACESSO = {
     ADMIN: 'ADMIN',
@@ -84,7 +90,8 @@
 
   const ME_EDITABLE_FIELDS_GESTAO = [
     ...ME_EDITABLE_FIELDS_FILIADO,
-    'nome', 'cpf', 'siape', 'sexo', 'data_nascimento', 'situacao'
+    'nome', 'cpf', 'siape', 'sexo', 'data_nascimento', 'situacao',
+    'situacao_sindical', 'uf_sindicato_externo'
   ];
 
   // Mapeamento para labels de exibição (opcional, mas útil para UI)
@@ -175,6 +182,17 @@
     return null;
   }
 
+  function isUfBrasileiraValida(val) {
+    if (!val) return false;
+    return UFS_BRASILEIRAS.includes(slugify(val));
+  }
+
+  function normalizeUfBrasileira(val) {
+    const s = slugify(val);
+    if (!s) return null;
+    return isUfBrasileiraValida(s) ? s : null;
+  }
+
   /**
    * Normaliza o Estado do Cadastro.
    */
@@ -212,7 +230,7 @@
    * Normaliza nomes para Title Case por palavra, preservando hífens e apóstrofos.
    * Regra: JOÃO DA SILVA -> João Da Silva; joÃO -> João
    * @param {string} input - Nome a ser normalizado.
-   * @returns {string|null} - Nome normalizado or null.
+   * @returns {string|null} - Nome normalizado ou null.
    */
   function normalizeNome(input) {
     if (!input || typeof input !== 'string') return input || null;
@@ -243,6 +261,7 @@
     ESTADO_CADASTRO,
     PERFIL_ACESSO,
     SITUACAO_SINDICAL,
+    UFS_BRASILEIRAS,
     LOTACOES_REPASSE,
     LOTACOES,
     LABELS,
@@ -251,6 +270,8 @@
     normalizeSexo,
     normalizePerfil,
     normalizeSituacaoSindical,
+    normalizeUfBrasileira,
+    isUfBrasileiraValida,
     normalizeEstadoCadastro,
     normalizeLotacao,
     normalizeNome,

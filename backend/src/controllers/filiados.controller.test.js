@@ -83,5 +83,52 @@ describe('Filiados Controller', () => {
 
       expect(res.status).toHaveBeenCalledWith(403);
     });
+
+    test('should reject uf_sindicato_externo ES for FILIADO_OUTRO_SINDICATO', async () => {
+      req.user = { id: 1, perfil_acesso: 'DIRETORIA' };
+      req.params.id = '10';
+      req.body = { situacao_sindical: 'FILIADO_OUTRO_SINDICATO', uf_sindicato_externo: 'ES', nome: 'Teste' };
+      service.buscarPorId.mockResolvedValue({ id: 10, nome: 'Teste', situacao_sindical: 'FILIADO_OUTRO_SINDICATO' });
+
+      await controller.atualizarFiliado(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        message: expect.stringContaining('não pode ser ES')
+      }));
+    });
+
+    test('should clear uf_sindicato_externo when situacao_sindical is not FILIADO_OUTRO_SINDICATO', async () => {
+      req.user = { id: 1, perfil_acesso: 'DIRETORIA' };
+      req.params.id = '10';
+      req.body = { situacao_sindical: 'NAO_FILIADO', uf_sindicato_externo: 'RJ', nome: 'Teste' };
+      service.buscarPorId.mockResolvedValue({ id: 10, nome: 'Teste', situacao_sindical: 'FILIADO_OUTRO_SINDICATO' });
+      service.atualizarFiliadoPorId.mockResolvedValue({ id: 10, nome: 'Teste' });
+
+      await controller.atualizarFiliado(req, res);
+
+      expect(service.atualizarFiliadoPorId).toHaveBeenCalledWith(10, expect.objectContaining({
+        situacao_sindical: 'NAO_FILIADO',
+        uf_sindicato_externo: null
+      }));
+    });
+  });
+
+  describe('criarFiliado', () => {
+    test('should reject invalid uf_sindicato_externo', async () => {
+      req.user = { id: 1, perfil_acesso: 'DIRETORIA' };
+      req.body = {
+        nome: 'Novo Filiado',
+        situacao_sindical: 'FILIADO_OUTRO_SINDICATO',
+        uf_sindicato_externo: 'XX'
+      };
+
+      await controller.criarFiliado(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        message: 'UF do sindicato externo inválida.'
+      }));
+    });
   });
 });

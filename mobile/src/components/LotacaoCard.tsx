@@ -9,7 +9,7 @@ import { logger } from '../infra/logger';
 
 import { PickerSafe } from './PickerSafe';
 import { TextInput } from 'react-native';
-import { SITUACAO_SINDICAL, SITUACAO_SINDICAL_LABELS } from '../utils/canon';
+import { SITUACAO_SINDICAL, SITUACAO_SINDICAL_LABELS, UFS_BRASILEIRAS } from '../utils/canon';
 
 interface Props {
   filiado: Filiado | null;
@@ -78,12 +78,34 @@ const LotacaoCard: React.FC<Props> = ({ filiado, setFiliado, isEditing = false, 
         <PickerSafe
           label="Situação Sindical"
           selectedValue={filiado?.situacao_sindical || 'FILIADO_SINPRF_ES'}
-          onValueChange={(itemValue) => setFiliado(f => f ? { ...f, situacao_sindical: itemValue as any } : null)}
+          onValueChange={(itemValue) => setFiliado(f => {
+            if (!f) return null;
+            const novaSituacao = itemValue as any;
+            return {
+              ...f,
+              situacao_sindical: novaSituacao,
+              uf_sindicato_externo: novaSituacao === SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO ? (f.uf_sindicato_externo || null) : null
+            };
+          })}
           enabled={isEditing}
           items={Object.values(SITUACAO_SINDICAL).map((s: string) => ({
             label: SITUACAO_SINDICAL_LABELS[s] || s,
             value: s
           }))}
+          pickerBoxStyle={!isEditing ? { backgroundColor: '#f0f0f0' } : undefined}
+        />
+      )}
+
+      {isGestao && filiado?.situacao_sindical === SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO && (
+        <PickerSafe
+          label="UF do sindicato"
+          selectedValue={filiado?.uf_sindicato_externo || ''}
+          onValueChange={(itemValue) => setFiliado(f => f ? { ...f, uf_sindicato_externo: (itemValue || null) as any } : null)}
+          enabled={isEditing}
+          items={[
+            { label: 'Selecione...', value: '' },
+            ...UFS_BRASILEIRAS.map((uf) => ({ label: uf, value: uf }))
+          ]}
           pickerBoxStyle={!isEditing ? { backgroundColor: '#f0f0f0' } : undefined}
         />
       )}
