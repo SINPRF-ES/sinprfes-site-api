@@ -9,6 +9,7 @@ export interface Filiado {
   perfil_acesso: string;
   situacao: string;
   situacao_funcional?: string; // Algumas rotas devolvem situacao_funcional
+  situacao_sindical?: string;
   avatar_url?: string | null;
 
   // Contato

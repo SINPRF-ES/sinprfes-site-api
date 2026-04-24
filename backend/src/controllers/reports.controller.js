@@ -258,6 +258,23 @@ exports.previewReport = async (req, res) => {
         ]
       });
 
+      if (params.value === "ATIVO" && data.situacaoSindical) {
+        sections.push({
+          kind: "kv",
+          title: "Situação Sindical (controle cadastral)",
+          items: [
+            { label: "Efetivo total informado", value: data.situacaoSindical.efetivo_total_informado },
+            { label: "Filiado ao SINPRF/ES", value: data.situacaoSindical.filiado_sinprf_es },
+            { label: "Filiado a outro sindicato", value: data.situacaoSindical.filiado_outro_sindicato },
+            { label: "Não filiado", value: data.situacaoSindical.nao_filiado },
+            { label: "Desconhecido / pendente", value: data.situacaoSindical.desconhecido },
+            { label: "% filiação (sobre efetivo total)", value: `${data.situacaoSindical.percentual_total}%` },
+            { label: "Base local ajustada", value: data.situacaoSindical.base_local_ajustada },
+            { label: "% filiação (base ajustada)", value: `${data.situacaoSindical.percentual_base_ajustada}%` }
+          ]
+        });
+      }
+
       if (params.value === "ATIVO" && data.repasseBreakdown) {
         sections.push({
           kind: "table",

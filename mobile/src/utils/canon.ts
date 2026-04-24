@@ -27,6 +27,15 @@ export const ESTADO_CADASTRO = {
 
 export type EstadoCadastro = typeof ESTADO_CADASTRO[keyof typeof ESTADO_CADASTRO];
 
+export const SITUACAO_SINDICAL = {
+  FILIADO_SINPRF_ES: 'FILIADO_SINPRF_ES',
+  FILIADO_OUTRO_SINDICATO: 'FILIADO_OUTRO_SINDICATO',
+  NAO_FILIADO: 'NAO_FILIADO',
+  DESCONHECIDO: 'DESCONHECIDO'
+} as const;
+
+export type SituacaoSindical = typeof SITUACAO_SINDICAL[keyof typeof SITUACAO_SINDICAL];
+
 // 3. Perfis de Acesso
 export const PERFIL_ACESSO = {
   ADMIN: 'ADMIN',
@@ -87,6 +96,13 @@ export const LABELS: Record<string, string> = {
   [SEXO.F]: '♀️ Feminino'
 };
 
+export const SITUACAO_SINDICAL_LABELS: Record<string, string> = {
+  [SITUACAO_SINDICAL.FILIADO_SINPRF_ES]: 'Filiado ao SINPRF/ES',
+  [SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO]: 'Filiado a outro sindicato',
+  [SITUACAO_SINDICAL.NAO_FILIADO]: 'Não filiado',
+  [SITUACAO_SINDICAL.DESCONHECIDO]: 'Desconhecido / pendente de validação',
+};
+
 /**
  * Normaliza o Sexo.
  */
@@ -128,6 +144,35 @@ export function normalizePerfil(val: string | null | undefined): PerfilAcesso {
   const s = slugify(val) as any;
   if (Object.values(PERFIL_ACESSO).includes(s)) return s;
   return PERFIL_ACESSO.FILIADO;
+}
+
+export function isSituacaoSindicalValida(val: string | null | undefined): val is SituacaoSindical {
+  if (!val) return false;
+  return Object.values(SITUACAO_SINDICAL).includes(val as SituacaoSindical);
+}
+
+export function normalizeSituacaoSindical(
+  val: string | null | undefined,
+  fallback: SituacaoSindical = SITUACAO_SINDICAL.FILIADO_SINPRF_ES
+): SituacaoSindical | null {
+  const s = slugify(val);
+  if (!s) return fallback;
+  if (isSituacaoSindicalValida(s)) return s;
+
+  if (['FILIADO_ES', 'FILIADO_SINPRF', 'FILIADO SINPRF ES', 'FILIADO SINPRF/ES', 'OES'].includes(s)) {
+    return SITUACAO_SINDICAL.FILIADO_SINPRF_ES;
+  }
+  if (['OUTRO_SINDICATO', 'FILIADO_OUTRO', 'FILIADO OUTRO'].includes(s)) {
+    return SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO;
+  }
+  if (['NAO FILIADO', 'NÃO FILIADO'].includes(s)) {
+    return SITUACAO_SINDICAL.NAO_FILIADO;
+  }
+  if (['PENDENTE'].includes(s)) {
+    return SITUACAO_SINDICAL.DESCONHECIDO;
+  }
+
+  return null;
 }
 
 /**

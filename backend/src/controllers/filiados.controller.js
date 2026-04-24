@@ -30,6 +30,9 @@ const {
   normalizeLotacao,
   normalizeNome,
   ehPerfilGestao,
+  normalizeSituacaoSindical,
+  isSituacaoSindicalValida,
+  SITUACAO_SINDICAL,
   ME_EDITABLE_FIELDS_FILIADO,
   ME_EDITABLE_FIELDS_GESTAO
 } = require('../shared/canon');
@@ -195,10 +198,18 @@ exports.listarFiliados = async (req, res) => {
     const perfilAcesso = (req.user.perfil_acesso || "FILIADO").toUpperCase();
     const termoBusca = (req.query.q || "").toString();
     const incluirArquivados = String(req.query.incluirArquivados || "").trim() === "1";
+    const situacaoSindicalRaw = (req.query.situacao_sindical || "").toString().trim();
+    const situacaoSindical = situacaoSindicalRaw
+      ? normalizeSituacaoSindical(situacaoSindicalRaw, null)
+      : "";
+
+    if (situacaoSindicalRaw && !situacaoSindical) {
+      return res.status(400).json({ success: false, message: "situacao_sindical inválida.", requestId });
+    }
 
     const incluirArquivadosEfetivo = incluirArquivados && ehPerfilGestao(perfilAcesso);
 
-    const lista = await listarParaPerfil(perfilAcesso, termoBusca, incluirArquivadosEfetivo);
+    const lista = await listarParaPerfil(perfilAcesso, termoBusca, incluirArquivadosEfetivo, situacaoSindical);
 
     return res.json({
       total: lista.length,
@@ -507,6 +518,7 @@ exports.atualizarFiliado = async (req, res) => {
       email2: body.email2,
       lotacao: body.lotacao ? normalizeLotacao(body.lotacao) : undefined,
       situacao: body.situacao ? normalizeSituacaoFuncional(body.situacao) : undefined,
+      situacao_sindical: undefined,
       numero: body.numero,
       complemento: body.complemento,
       cep: body.cep,
@@ -537,6 +549,17 @@ exports.atualizarFiliado = async (req, res) => {
         }
         payload.perfil_acesso = novoPerfil;
       }
+    }
+
+    if (body.situacao_sindical !== undefined) {
+      if (!['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(perfilAtor)) {
+        return res.status(403).json({ success: false, message: Textos.AUTH.PERMISSAO_INSUFICIENTE, requestId });
+      }
+      const situacaoSindical = normalizeSituacaoSindical(body.situacao_sindical, null);
+      if (!situacaoSindical || !isSituacaoSindicalValida(situacaoSindical)) {
+        return res.status(400).json({ success: false, message: "Situação sindical inválida.", requestId });
+      }
+      payload.situacao_sindical = situacaoSindical;
     }
 
     const atualizado = await atualizarFiliadoPorId(idAlvo, payload);
@@ -636,6 +659,9 @@ exports.criarFiliado = async (req, res) => {
       email2: body.email2 || null,
       lotacao: normalizeLotacao(body.lotacao),
       situacao: normalizeSituacaoFuncional(body.situacao || "ATIVO"),
+      situacao_sindical: body.situacao_sindical
+        ? normalizeSituacaoSindical(body.situacao_sindical, null)
+        : SITUACAO_SINDICAL.FILIADO_SINPRF_ES,
       perfil_acesso: normalizePerfil(body.perfil_acesso || "FILIADO"),
       logradouro_bairro: body.logradouro_bairro || null,
       numero: body.numero || null,
@@ -645,6 +671,10 @@ exports.criarFiliado = async (req, res) => {
       cep: body.cep || null,
       ...dadosDependentes,
     };
+
+    if (!dadosNovo.situacao_sindical) {
+      return res.status(400).json({ success: false, message: "Situação sindical inválida.", requestId });
+    }
 
     const novo = await criarFiliadoInicial(dadosNovo, perfilCriador);
 

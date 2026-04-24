@@ -13,7 +13,9 @@ const {
   normalizeSexo,
   normalizePerfil,
   normalizeLotacao,
-  normalizeNome
+  normalizeNome,
+  normalizeSituacaoSindical,
+  SITUACAO_SINDICAL
 } = require('../shared/canon');
 
 /**
@@ -74,6 +76,7 @@ const FILIADO_COLUMNS = `
   id, nome, cpf, siape, sexo, data_nascimento, telefone1, telefone2, email1, email2,
   logradouro_bairro, numero, complemento, cidade, uf, cep,
   lotacao, situacao, senha_hash, twofa_secret, perfil_acesso,
+  situacao_sindical,
   avatar_url, bloqueado, ultimo_acesso, criado_em, atualizado_em,
   arquivado_em, arquivado_motivo, arquivado_por,
   dep1_nome, dep1_cpf, dep1_data_nascimento, dep1_parentesco, dep1_parentesco_outro,
@@ -343,6 +346,9 @@ async function atualizarFiliadoPorId(id, dados) {
   if (dados.situacao !== undefined) {
     addCampo("situacao", normalizeSituacaoFuncional(dados.situacao));
   }
+  if (dados.situacao_sindical !== undefined) {
+    addCampo("situacao_sindical", normalizeSituacaoSindical(dados.situacao_sindical, SITUACAO_SINDICAL.FILIADO_SINPRF_ES));
+  }
   if (dados.perfil_acesso !== undefined) {
     addCampo("perfil_acesso", normalizePerfil(dados.perfil_acesso));
   }
@@ -415,7 +421,7 @@ async function atualizarFiliadoPorId(id, dados) {
  * - false: apenas ativos (arquivado_em IS NULL)
  * - true: ativos + arquivados
  */
-async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados = false) {
+async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados = false, situacaoSindical = "") {
   const perfil = (perfilAcesso || "FILIADO").toUpperCase();
   const filtro = (termoBusca || "").trim();
 
@@ -461,6 +467,11 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
     }
   }
 
+  if (situacaoSindical) {
+    params.push(situacaoSindical);
+    conds.push(`f.situacao_sindical = $${params.length}`);
+  }
+
   const whereSql = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
 
   if (isGestao) {
@@ -469,7 +480,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
       `
       SELECT
         f.id, f.nome, f.cpf, f.siape, f.sexo, f.data_nascimento, f.telefone1, f.telefone2, f.email1, f.email2,
-        f.lotacao, f.situacao, f.perfil_acesso,
+        f.lotacao, f.situacao, f.situacao_sindical, f.perfil_acesso,
         f.logradouro_bairro, f.numero, f.complemento, f.cidade, f.uf, f.cep,
         f.avatar_url,
         f.arquivado_em, f.arquivado_motivo, f.arquivado_por,
@@ -493,7 +504,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
   const { rows } = await pool.query(
     `
     SELECT
-      f.id, f.nome, f.telefone1, f.avatar_url, f.lotacao, f.situacao, f.arquivado_em
+      f.id, f.nome, f.telefone1, f.avatar_url, f.lotacao, f.situacao, f.situacao_sindical, f.arquivado_em
     FROM filiados f
     ${whereSql}
     ORDER BY f.nome ASC
@@ -585,6 +596,7 @@ async function criarFiliadoInicial(dados, perfilCriador) {
 
     push("lotacao", normalizeLotacao(lotacao));
     push("situacao", normalizeSituacaoFuncional(situacao));
+    push("situacao_sindical", normalizeSituacaoSindical(dados.situacao_sindical, SITUACAO_SINDICAL.FILIADO_SINPRF_ES));
     push("perfil_acesso", normalizePerfil(perfilNovo));
 
     // NOW() directly in SQL, no parameter increment

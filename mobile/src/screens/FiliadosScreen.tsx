@@ -24,6 +24,7 @@ export default function FiliadosScreen({ navigation, route }: any) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroCadastro, setFiltroCadastro] = useState('CADASTRO_ATIVO');
   const [filtroFuncional, setFiltroFuncional] = useState('TODOS');
+  const [filtroSindical, setFiltroSindical] = useState('TODOS');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -124,6 +125,11 @@ export default function FiliadosScreen({ navigation, route }: any) {
         }
       }
 
+      if (filtroSindical !== 'TODOS') {
+        const situacaoSindical = (f.situacao_sindical || Canon.SITUACAO_SINDICAL.FILIADO_SINPRF_ES).toUpperCase();
+        if (situacaoSindical !== filtroSindical) return false;
+      }
+
       // Filtro Estado do Cadastro (local filter additionally)
       if (ehGestao) {
         if (filtroCadastro === 'ARQUIVADOS' && !f.arquivado_em) return false;
@@ -132,7 +138,7 @@ export default function FiliadosScreen({ navigation, route }: any) {
 
       return true;
     });
-  }, [filiados, searchTerm, ehGestao, filtroCadastro, filtroFuncional]);
+  }, [filiados, searchTerm, ehGestao, filtroCadastro, filtroFuncional, filtroSindical]);
 
   const handleEdit = useCallback((filiado: Filiado) => {
     const filiadoId = getCanonicalFiliadoId(filiado);
@@ -202,6 +208,19 @@ export default function FiliadosScreen({ navigation, route }: any) {
             { label: "Todos", value: "TODOS" },
             ...Object.values(Canon.SITUACAO_FUNCIONAL).map(s => ({ label: Canon.LABELS[s], value: s })),
             ...Canon.LOTACOES.map(l => ({ label: l, value: l })),
+          ]}
+        />
+        <PickerSafe
+          containerStyle={styles.filterGroup}
+          label="Situação sindical:"
+          labelStyle={styles.filterLabel}
+          selectedValue={filtroSindical}
+          onValueChange={(v) => v && setFiltroSindical(v as string)}
+          mode="dropdown"
+          dropdownIconColor="#003366"
+          items={[
+            { label: "Todos", value: "TODOS" },
+            ...Object.values(Canon.SITUACAO_SINDICAL).map(s => ({ label: Canon.SITUACAO_SINDICAL_LABELS[s], value: s })),
           ]}
         />
       </View>

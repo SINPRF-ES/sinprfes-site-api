@@ -16,7 +16,7 @@ import { toISODate } from '../utils/date';
 import { onlyDigits } from '../shared/format/formatters';
 import { isGestao as checkIsGestao } from '../utils/filiadoUtils';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
-import { normalizeNome } from '../utils/canon';
+import { normalizeNome, SITUACAO_SINDICAL } from '../utils/canon';
 
 const initialFiliadoState: Partial<Filiado> = {
   nome: '',
@@ -35,6 +35,7 @@ const initialFiliadoState: Partial<Filiado> = {
   uf: '',
   lotacao: 'SEDE', // Valor padrão
   situacao: 'ATIVO', // Valor padrão
+  situacao_sindical: SITUACAO_SINDICAL.FILIADO_SINPRF_ES,
   perfil_acesso: 'FILIADO', // Valor padrão
   dep1_nome: '', dep1_cpf: '', dep1_nascimento: null, dep1_parentesco: '',
   dep2_nome: '', dep2_cpf: '', dep2_nascimento: null, dep2_parentesco: '',

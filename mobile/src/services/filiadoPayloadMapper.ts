@@ -36,6 +36,7 @@ export const buildUpdateFiliadoPayload = (
   if (formState.lotacao) payload.lotacao = formState.lotacao;
   if (formState.situacao_funcional) payload.situacao = formState.situacao_funcional;
   if (formState.perfil_acesso) payload.perfil_acesso = formState.perfil_acesso;
+  if (formState.situacao_sindical) payload.situacao_sindical = formState.situacao_sindical;
 
   // Endereço (somente se permitido na whitelist e enviado)
   if (formState.logradouro_bairro) payload.logradouro_bairro = formState.logradouro_bairro;
@@ -76,6 +77,10 @@ export const buildUpdateFiliadoPayload = (
   // Garante que campos proibidos extras sejam removidos (segurança adicional)
   const forbiddenGlobal: string[] = ['id', 'matricula_sinprf', 'estado_cadastro', 'avatar_url', 'criado_em', 'atualizado_em'];
   forbiddenGlobal.forEach(key => delete (finalPayload as any)[key]);
+
+  if (isGestao && payload.situacao_sindical) {
+    (finalPayload as any).situacao_sindical = payload.situacao_sindical;
+  }
 
   if (__DEV__) {
     console.log('--- [DEV] Payload Mapeado (Perfil: ' + perfilAtor + ') ---');
