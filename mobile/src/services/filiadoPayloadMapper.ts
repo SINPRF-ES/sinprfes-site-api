@@ -37,6 +37,7 @@ export const buildUpdateFiliadoPayload = (
   if (formState.situacao_funcional) payload.situacao = formState.situacao_funcional;
   if (formState.perfil_acesso) payload.perfil_acesso = formState.perfil_acesso;
   if (formState.situacao_sindical) payload.situacao_sindical = formState.situacao_sindical;
+  if (formState.uf_sindicato_externo !== undefined) payload.uf_sindicato_externo = formState.uf_sindicato_externo;
 
   // Endereço (somente se permitido na whitelist e enviado)
   if (formState.logradouro_bairro) payload.logradouro_bairro = formState.logradouro_bairro;
@@ -80,6 +81,9 @@ export const buildUpdateFiliadoPayload = (
 
   if (isGestao && payload.situacao_sindical) {
     (finalPayload as any).situacao_sindical = payload.situacao_sindical;
+    (finalPayload as any).uf_sindicato_externo = payload.situacao_sindical === 'FILIADO_OUTRO_SINDICATO'
+      ? ((payload.uf_sindicato_externo || '').toString().toUpperCase() || null)
+      : null;
   }
 
   if (__DEV__) {

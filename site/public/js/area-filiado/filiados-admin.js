@@ -17,6 +17,29 @@
         "NAO_FILIADO",
         "DESCONHECIDO"
     ];
+    const UFS_BRASILEIRAS = global.Canon?.UFS_BRASILEIRAS || [
+        "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
+        "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC",
+        "SP", "SE", "TO"
+    ];
+
+    function atualizarCampoUfSindicatoExterno(form) {
+        if (!form) return;
+        const situacaoSindical = form.querySelector('[name="situacao_sindical"]')?.value || "FILIADO_SINPRF_ES";
+        const wrapper = form.querySelector('[data-uf-sindicato-externo-wrapper]');
+        const input = form.querySelector('[name="uf_sindicato_externo"]');
+        const ajuda = form.querySelector('[data-uf-sindicato-externo-help]');
+        if (!wrapper || !input) return;
+
+        const deveExibir = situacaoSindical === "FILIADO_OUTRO_SINDICATO";
+        wrapper.style.display = deveExibir ? "" : "none";
+        input.disabled = !deveExibir;
+        if (!deveExibir) input.value = "";
+
+        if (ajuda) {
+            ajuda.style.display = deveExibir && String(input.value || "").toUpperCase() === "ES" ? "block" : "none";
+        }
+    }
 
     function atualizarObrigatoriedadeCampos(form) {
         if (!form) return;
@@ -300,6 +323,10 @@
             const situacao = (f.situacao || f.situacao_funcional || 'ATIVO').toUpperCase();
             const situacaoSindical = (f.situacao_sindical || "FILIADO_SINPRF_ES").toUpperCase();
             const situacaoSindicalLabel = global.Canon?.SITUACAO_SINDICAL_LABELS?.[situacaoSindical] || situacaoSindical;
+            const ufSindicatoExterno = (f.uf_sindicato_externo || "").toUpperCase();
+            const situacaoSindicalComUf = situacaoSindical === "FILIADO_OUTRO_SINDICATO" && ufSindicatoExterno
+                ? `${situacaoSindicalLabel} — ${ufSindicatoExterno}`
+                : situacaoSindicalLabel;
             const situacaoLower = situacao.toLowerCase();
             const classeStatus = `status-${situacaoLower}`;
             const nascimento = f.data_nascimento;
@@ -315,7 +342,7 @@
                             <div>
                                 <div class="filiado-nome">${safeEscape(f.nome)}</div>
                                 <div class="filiado-meta">${f.cpf ? safeEscape(formatarCPF(f.cpf)) + ' • ' : ''}${safeEscape(f.lotacao || 'SEDE')}</div>
-                                <div class="filiado-meta">🏷️ ${safeEscape(situacaoSindicalLabel)}</div>
+                                <div class="filiado-meta">🏷️ ${safeEscape(situacaoSindicalComUf)}</div>
                                 ${["FILIADO", "ORGANIZADOR"].includes(perfilAtual) ? '' : `
                                 <div class="filiado-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
                                 `}
@@ -451,6 +478,16 @@
                             </select>
                         </div>
                     </div>
+                    <div class="field-row" data-uf-sindicato-externo-wrapper style="display:none;">
+                        <div class="field-group">
+                            <label>UF do sindicato</label>
+                            <select class="ui-select" name="uf_sindicato_externo" ${ehGestao ? "" : "disabled"}>
+                                <option value="">Selecione...</option>
+                                ${UFS_BRASILEIRAS.map(ufOpt => `<option value="${ufOpt}" ${(f.uf_sindicato_externo || "").toUpperCase() === ufOpt ? "selected" : ""}>${ufOpt}</option>`).join("")}
+                            </select>
+                            <small data-uf-sindicato-externo-help style="display:none; color:#8a6d3b;">Para sindicato externo, use preferencialmente UF diferente de ES.</small>
+                        </div>
+                    </div>
                     ${canChangeProfile ? `
                         <div class="field-row">
                             <div class="field-group">
@@ -583,8 +620,17 @@
 
         const situacaoSelect = form.querySelector('[name="situacao_sindical"]');
         if (situacaoSelect) {
-            situacaoSelect.onchange = () => atualizarObrigatoriedadeCampos(form);
+            situacaoSelect.onchange = () => {
+                atualizarObrigatoriedadeCampos(form);
+                atualizarCampoUfSindicatoExterno(form);
+            };
             atualizarObrigatoriedadeCampos(form);
+            atualizarCampoUfSindicatoExterno(form);
+        }
+
+        const ufSindicatoExternoSelect = form.querySelector('[name="uf_sindicato_externo"]');
+        if (ufSindicatoExternoSelect) {
+            ufSindicatoExternoSelect.onchange = () => atualizarCampoUfSindicatoExterno(form);
         }
 
         if (gerarCamposDependentes) {
@@ -790,6 +836,15 @@
 
             const situacaoFinal = payload.situacao_sindical || (filiado && filiado.situacao_sindical) || "FILIADO_SINPRF_ES";
             const ehFiliadoEfetivo = situacaoFinal === "FILIADO_SINPRF_ES";
+            if (situacaoFinal !== "FILIADO_OUTRO_SINDICATO") {
+                payload.uf_sindicato_externo = null;
+            } else {
+                payload.uf_sindicato_externo = (payload.uf_sindicato_externo || "").toUpperCase() || null;
+                if (payload.uf_sindicato_externo === "ES") {
+                    alert("Para filiação a outro sindicato, a UF do sindicato externo não pode ser ES.");
+                    return;
+                }
+            }
 
             // Validação final de campos críticos se presentes
             if (payload.cpf || ehFiliadoEfetivo) {
@@ -920,6 +975,14 @@
                                     }).join("")}
                                 </select>
                             </div>
+                            <div class="field-group" data-uf-sindicato-externo-wrapper style="display:none;">
+                                <label>UF do sindicato</label>
+                                <select class="ui-select" name="uf_sindicato_externo" style="border: 2px solid var(--primary-color);">
+                                    <option value="">Selecione...</option>
+                                    ${UFS_BRASILEIRAS.map(ufOpt => `<option value="${ufOpt}">${ufOpt}</option>`).join("")}
+                                </select>
+                                <small data-uf-sindicato-externo-help style="display:none; color:#8a6d3b;">Para sindicato externo, use preferencialmente UF diferente de ES.</small>
+                            </div>
                             <div class="field-group">
                                 <label>CPF</label>
                                 <input class="ui-input" name="cpf" placeholder="000.000.000-00">
@@ -1009,8 +1072,17 @@
 
         const situacaoSelect = form.querySelector('[name="situacao_sindical"]');
         if (situacaoSelect) {
-            situacaoSelect.onchange = () => atualizarObrigatoriedadeCampos(form);
+            situacaoSelect.onchange = () => {
+                atualizarObrigatoriedadeCampos(form);
+                atualizarCampoUfSindicatoExterno(form);
+            };
             atualizarObrigatoriedadeCampos(form);
+            atualizarCampoUfSindicatoExterno(form);
+        }
+
+        const ufSindicatoExternoSelect = form.querySelector('[name="uf_sindicato_externo"]');
+        if (ufSindicatoExternoSelect) {
+            ufSindicatoExternoSelect.onchange = () => atualizarCampoUfSindicatoExterno(form);
         }
 
         // Aplicar Máscaras
@@ -1059,6 +1131,15 @@
             const onlyDigits = (v) => global.Formatters ? global.Formatters.onlyDigits(v) : (v || "").toString().replace(/\D/g, "");
 
             const ehFiliadoEfetivo = payload.situacao_sindical === "FILIADO_SINPRF_ES";
+            if (payload.situacao_sindical !== "FILIADO_OUTRO_SINDICATO") {
+                payload.uf_sindicato_externo = null;
+            } else {
+                payload.uf_sindicato_externo = (payload.uf_sindicato_externo || "").toUpperCase() || null;
+                if (payload.uf_sindicato_externo === "ES") {
+                    alert("Para filiação a outro sindicato, a UF do sindicato externo não pode ser ES.");
+                    return;
+                }
+            }
 
             // Validação e Sanitização CPF
             if (ehFiliadoEfetivo || (payload.cpf && onlyDigits(payload.cpf).length > 0)) {

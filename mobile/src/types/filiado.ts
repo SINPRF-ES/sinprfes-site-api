@@ -10,6 +10,7 @@ export interface Filiado {
   situacao: string;
   situacao_funcional?: string; // Algumas rotas devolvem situacao_funcional
   situacao_sindical?: string;
+  uf_sindicato_externo?: string | null;
   avatar_url?: string | null;
 
   // Contato

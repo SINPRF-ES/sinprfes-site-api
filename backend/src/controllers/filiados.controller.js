@@ -33,6 +33,7 @@ const {
   normalizeSituacaoSindical,
   isSituacaoSindicalValida,
   SITUACAO_SINDICAL,
+  normalizeUfBrasileira,
   ME_EDITABLE_FIELDS_FILIADO,
   ME_EDITABLE_FIELDS_GESTAO
 } = require('../shared/canon');
@@ -120,6 +121,26 @@ function validarESanitizarDependentes(body) {
   }
 
   return dependentesValidos;
+}
+
+function normalizarUfSindicatoExternoParaPayload({ situacaoSindical, ufSindicatoExternoRaw }) {
+  if (situacaoSindical !== SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO) {
+    return { ok: true, value: null };
+  }
+
+  if (ufSindicatoExternoRaw === undefined || ufSindicatoExternoRaw === null || String(ufSindicatoExternoRaw).trim() === "") {
+    return { ok: true, value: null };
+  }
+
+  const ufNorm = normalizeUfBrasileira(ufSindicatoExternoRaw);
+  if (!ufNorm) {
+    return { ok: false, message: "UF do sindicato externo inválida." };
+  }
+  if (ufNorm === 'ES') {
+    return { ok: false, message: "UF do sindicato externo não pode ser ES para FILIADO_OUTRO_SINDICATO." };
+  }
+
+  return { ok: true, value: ufNorm };
 }
 
 /**
@@ -519,6 +540,7 @@ exports.atualizarFiliado = async (req, res) => {
       lotacao: body.lotacao ? normalizeLotacao(body.lotacao) : undefined,
       situacao: body.situacao ? normalizeSituacaoFuncional(body.situacao) : undefined,
       situacao_sindical: undefined,
+      uf_sindicato_externo: undefined,
       numero: body.numero,
       complemento: body.complemento,
       cep: body.cep,
@@ -566,6 +588,16 @@ exports.atualizarFiliado = async (req, res) => {
     if (!alvo) {
       return res.status(404).json({ success: false, message: Textos.FILIADOS.FILIADO_NAO_ENCONTRADO, requestId });
     }
+
+    const situacaoSindicalFinal = payload.situacao_sindical || alvo.situacao_sindical || SITUACAO_SINDICAL.FILIADO_SINPRF_ES;
+    const validacaoUfExterna = normalizarUfSindicatoExternoParaPayload({
+      situacaoSindical: situacaoSindicalFinal,
+      ufSindicatoExternoRaw: body.uf_sindicato_externo
+    });
+    if (!validacaoUfExterna.ok) {
+      return res.status(400).json({ success: false, message: validacaoUfExterna.message, requestId });
+    }
+    payload.uf_sindicato_externo = validacaoUfExterna.value;
 
     const situacaoFinal = payload.situacao_sindical || alvo.situacao_sindical;
     if (situacaoFinal === SITUACAO_SINDICAL.FILIADO_SINPRF_ES) {
@@ -703,6 +735,7 @@ exports.criarFiliado = async (req, res) => {
       lotacao: body.lotacao ? normalizeLotacao(body.lotacao) : (ehFiliadoEfetivo ? "SEDE" : "NENHUMA"),
       situacao: normalizeSituacaoFuncional(body.situacao || "ATIVO"),
       situacao_sindical: situacaoSindical,
+      uf_sindicato_externo: null,
       perfil_acesso: normalizePerfil(body.perfil_acesso || "FILIADO"),
       logradouro_bairro: body.logradouro_bairro || null,
       numero: body.numero || null,
@@ -712,6 +745,15 @@ exports.criarFiliado = async (req, res) => {
       cep: body.cep || null,
       ...dadosDependentes,
     };
+
+    const validacaoUfExterna = normalizarUfSindicatoExternoParaPayload({
+      situacaoSindical,
+      ufSindicatoExternoRaw: body.uf_sindicato_externo
+    });
+    if (!validacaoUfExterna.ok) {
+      return res.status(400).json({ success: false, message: validacaoUfExterna.message, requestId });
+    }
+    dadosNovo.uf_sindicato_externo = validacaoUfExterna.value;
 
 
     const novo = await criarFiliadoInicial(dadosNovo, perfilCriador);

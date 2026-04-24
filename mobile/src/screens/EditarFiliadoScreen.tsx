@@ -84,6 +84,10 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
 
     const situacaoSindical = filiado.situacao_sindical || 'FILIADO_SINPRF_ES';
     const ehFiliadoEfetivo = situacaoSindical === 'FILIADO_SINPRF_ES';
+    if (situacaoSindical === 'FILIADO_OUTRO_SINDICATO' && (filiado.uf_sindicato_externo || '').toUpperCase() === 'ES') {
+      Alert.alert('Erro de Validação', 'Para filiação a outro sindicato, a UF do sindicato externo não pode ser ES.');
+      return;
+    }
 
     if (ehFiliadoEfetivo) {
       if (!filiado.nome || !filiado.cpf || !filiado.email1) {

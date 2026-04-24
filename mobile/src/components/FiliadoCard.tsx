@@ -52,6 +52,10 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
   const situacaoLabel = situacaoNormalizada || 'NÃO INFORMADO';
   const situacaoSindical = (filiado.situacao_sindical || SITUACAO_SINDICAL.FILIADO_SINPRF_ES).toUpperCase();
   const situacaoSindicalLabel = SITUACAO_SINDICAL_LABELS[situacaoSindical] || situacaoSindical;
+  const ufSindicatoExterno = (filiado.uf_sindicato_externo || '').toUpperCase();
+  const situacaoSindicalComUf = situacaoSindical === SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO && ufSindicatoExterno
+    ? `${situacaoSindicalLabel} — ${ufSindicatoExterno}`
+    : situacaoSindicalLabel;
   const isArquivado = !!filiado.arquivado_em;
 
   return (
@@ -69,7 +73,7 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
             </View>
           </View>
           <Text style={styles.lotacao}>Lotação: {filiado.lotacao || 'Não informada'}</Text>
-          <Text style={styles.detalhe}>Situação sindical: {situacaoSindicalLabel}</Text>
+          <Text style={styles.detalhe}>Situação sindical: {situacaoSindicalComUf}</Text>
           <Text style={styles.detalhe}>Telefone: {formatTelefone(filiado.telefone1) || '—'}</Text>
         </View>
       </View>
