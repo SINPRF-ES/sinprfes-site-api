@@ -178,11 +178,11 @@
                     flex-direction: column;
                     gap: 10px;
                 }
-                .profile-name-title {
+                .profile-header .profile-name-title {
                     margin: 0;
                     font-size: 2rem;
-                    color: #fff;
-                    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+                    color: #f8fafc !important;
+                    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
                     font-weight: 800;
                 }
                 .profile-badges { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
