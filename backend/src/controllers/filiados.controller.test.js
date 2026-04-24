@@ -61,4 +61,27 @@ describe('Filiados Controller', () => {
       }));
     });
   });
+
+  describe('listarFiliados', () => {
+    test('should return 400 for invalid situacao_sindical filter', async () => {
+      req.query = { situacao_sindical: 'valor_invalido' };
+      await controller.listarFiliados(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        message: 'situacao_sindical inválida.'
+      }));
+    });
+  });
+
+  describe('atualizarFiliado', () => {
+    test('should block FILIADO profile from updating situacao_sindical', async () => {
+      req.user = { id: 22, perfil_acesso: 'FILIADO' };
+      req.params.id = '10';
+      req.body = { situacao_sindical: 'NAO_FILIADO' };
+
+      await controller.atualizarFiliado(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+  });
 });

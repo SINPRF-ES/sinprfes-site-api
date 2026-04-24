@@ -34,6 +34,13 @@
     ARQUIVADO: 'ARQUIVADO'
   };
 
+  const SITUACAO_SINDICAL = {
+    FILIADO_SINPRF_ES: 'FILIADO_SINPRF_ES',
+    FILIADO_OUTRO_SINDICATO: 'FILIADO_OUTRO_SINDICATO',
+    NAO_FILIADO: 'NAO_FILIADO',
+    DESCONHECIDO: 'DESCONHECIDO'
+  };
+
   // 3. Perfis de Acesso
   const PERFIL_ACESSO = {
     ADMIN: 'ADMIN',
@@ -90,6 +97,13 @@
     [SEXO.F]: '♀️ Feminino'
   };
 
+  const SITUACAO_SINDICAL_LABELS = {
+    [SITUACAO_SINDICAL.FILIADO_SINPRF_ES]: 'Filiado ao SINPRF/ES',
+    [SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO]: 'Filiado a outro sindicato',
+    [SITUACAO_SINDICAL.NAO_FILIADO]: 'Não filiado',
+    [SITUACAO_SINDICAL.DESCONHECIDO]: 'Desconhecido / pendente de validação'
+  };
+
   /**
    * Remove acentos e caracteres especiais para comparação robusta.
    */
@@ -132,6 +146,32 @@
     const s = slugify(val);
     if (PERFIL_ACESSO[s]) return PERFIL_ACESSO[s];
     return PERFIL_ACESSO.FILIADO; // Default seguro
+  }
+
+  function isSituacaoSindicalValida(val) {
+    return Object.values(SITUACAO_SINDICAL).includes(val);
+  }
+
+  function normalizeSituacaoSindical(val, fallback = SITUACAO_SINDICAL.FILIADO_SINPRF_ES) {
+    const s = slugify(val);
+    if (!s) return fallback;
+
+    if (isSituacaoSindicalValida(s)) return s;
+
+    if (['FILIADO_ES', 'FILIADO_SINPRF', 'FILIADO SINPRF ES', 'FILIADO SINPRF/ES', 'OES'].includes(s)) {
+      return SITUACAO_SINDICAL.FILIADO_SINPRF_ES;
+    }
+    if (['OUTRO_SINDICATO', 'FILIADO_OUTRO', 'FILIADO OUTRO'].includes(s)) {
+      return SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO;
+    }
+    if (['NAO FILIADO', 'NÃO FILIADO'].includes(s)) {
+      return SITUACAO_SINDICAL.NAO_FILIADO;
+    }
+    if (['PENDENTE'].includes(s)) {
+      return SITUACAO_SINDICAL.DESCONHECIDO;
+    }
+
+    return null;
   }
 
   /**
@@ -192,16 +232,20 @@
     SEXO,
     ESTADO_CADASTRO,
     PERFIL_ACESSO,
+    SITUACAO_SINDICAL,
     LOTACOES_REPASSE,
     LOTACOES,
     LABELS,
+    SITUACAO_SINDICAL_LABELS,
     normalizeSituacaoFuncional,
     normalizeSexo,
     normalizePerfil,
+    normalizeSituacaoSindical,
     normalizeEstadoCadastro,
     normalizeLotacao,
     normalizeNome,
     ehPerfilGestao,
+    isSituacaoSindicalValida,
     slugify,
     ME_EDITABLE_FIELDS_FILIADO,
     ME_EDITABLE_FIELDS_GESTAO

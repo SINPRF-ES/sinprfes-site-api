@@ -11,6 +11,12 @@
 
     let cacheLista = [];
     const SITUACAO_OPCOES = ["ATIVO", "VETERANO", "PENSIONISTA"];
+    const SITUACAO_SINDICAL_OPCOES = [
+        "FILIADO_SINPRF_ES",
+        "FILIADO_OUTRO_SINDICATO",
+        "NAO_FILIADO",
+        "DESCONHECIDO"
+    ];
 
     const LOTACAO_OPCOES = global.Canon?.LOTACOES || [
       "SEDE",
@@ -133,6 +139,16 @@
                         </select>
                     </label>` : '<input class="ui-input" type="hidden" id="filtro-estado-cadastro" value="CADASTRO_ATIVO">'}
                     <label>
+                        Situação sindical:
+                        <select class="ui-select" id="filtro-situacao-sindical">
+                            <option value="TODOS" selected>Todos</option>
+                            <option value="FILIADO_SINPRF_ES">Filiado ao SINPRF/ES</option>
+                            <option value="FILIADO_OUTRO_SINDICATO">Filiado a outro sindicato</option>
+                            <option value="NAO_FILIADO">Não filiado</option>
+                            <option value="DESCONHECIDO">Desconhecido / pendente</option>
+                        </select>
+                    </label>
+                    <label>
                         Situação:
                         <select class="ui-select" id="filtro-situacao-funcional">
                             <option value="TODOS" selected>Todos</option>
@@ -153,6 +169,7 @@
                 if (ehGestao) {
                     document.getElementById("filtro-estado-cadastro").onchange = carregarLista;
                 }
+                document.getElementById("filtro-situacao-sindical").onchange = carregarLista;
                 document.getElementById("filtro-situacao-funcional").onchange = () => filtrarLista(campoBusca.value);
             }
             handlersConfigurados = true;
@@ -168,8 +185,12 @@
         try {
             listaEl.innerHTML = `<p style="text-align:center; color:var(--ui-text-muted);">Carregando...</p>`;
             const estado = (document.getElementById("filtro-estado-cadastro")?.value || "CADASTRO_ATIVO").toUpperCase();
+            const situacaoSindical = (document.getElementById("filtro-situacao-sindical")?.value || "TODOS").toUpperCase();
+            const params = new URLSearchParams();
+            if (estado !== "CADASTRO_ATIVO") params.set("incluirArquivados", "1");
+            if (situacaoSindical !== "TODOS") params.set("situacao_sindical", situacaoSindical);
             let url = "/api/filiados";
-            if (estado !== "CADASTRO_ATIVO") url += "?incluirArquivados=1";
+            if (params.toString()) url += `?${params.toString()}`;
 
             const r = await window.Api.apiFetch(url);
             if (r.ok) {
@@ -233,6 +254,8 @@
 
         el.innerHTML = res.map(f => {
             const situacao = (f.situacao || f.situacao_funcional || 'ATIVO').toUpperCase();
+            const situacaoSindical = (f.situacao_sindical || "FILIADO_SINPRF_ES").toUpperCase();
+            const situacaoSindicalLabel = global.Canon?.SITUACAO_SINDICAL_LABELS?.[situacaoSindical] || situacaoSindical;
             const situacaoLower = situacao.toLowerCase();
             const classeStatus = `status-${situacaoLower}`;
             const nascimento = f.data_nascimento;
@@ -248,6 +271,7 @@
                             <div>
                                 <div class="filiado-nome">${safeEscape(f.nome)}</div>
                                 <div class="filiado-meta">${f.cpf ? safeEscape(formatarCPF(f.cpf)) + ' • ' : ''}${safeEscape(f.lotacao || 'SEDE')}</div>
+                                <div class="filiado-meta">🏷️ ${safeEscape(situacaoSindicalLabel)}</div>
                                 ${["FILIADO", "ORGANIZADOR"].includes(perfilAtual) ? '' : `
                                 <div class="filiado-meta" style="font-size:0.8rem;">🎂 ${nascimento ? global.Formatters.formatISOToBR(nascimento) : '—'} (${idade})</div>
                                 `}
@@ -370,6 +394,16 @@
                             <select class="ui-select" name="lotacao">
                                 <option value="">Selecione...</option>
                                 ${LOTACAO_OPCOES.map(op => `<option value="${op}" ${f.lotacao === op ? "selected" : ""}>${op}</option>`).join("")}
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label>Situação Sindical</label>
+                            <select class="ui-select" name="situacao_sindical" ${ehGestao ? "" : "disabled"}>
+                                ${SITUACAO_SINDICAL_OPCOES.map(op => {
+                                    const label = global.Canon?.SITUACAO_SINDICAL_LABELS?.[op] || op;
+                                    const atual = (f.situacao_sindical || "FILIADO_SINPRF_ES").toUpperCase();
+                                    return `<option value="${op}" ${atual === op ? "selected" : ""}>${label}</option>`;
+                                }).join("")}
                             </select>
                         </div>
                     </div>

@@ -6,6 +6,7 @@ import { UserProfile } from '../hooks/useAuth';
 import { formatCpf, formatTelefone } from '../shared/format/formatters';
 import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
 import { calculateAgeBreakdown, formatISOToBRDateTime } from '../utils/date';
+import { SITUACAO_SINDICAL, SITUACAO_SINDICAL_LABELS } from '../utils/canon';
 
 // Adicionando situacaoFuncional para refletir o modelo de dados completo.
 interface FiliadoCardProps {
@@ -49,6 +50,8 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
   };
 
   const situacaoLabel = situacaoNormalizada || 'NÃO INFORMADO';
+  const situacaoSindical = (filiado.situacao_sindical || SITUACAO_SINDICAL.FILIADO_SINPRF_ES).toUpperCase();
+  const situacaoSindicalLabel = SITUACAO_SINDICAL_LABELS[situacaoSindical] || situacaoSindical;
   const isArquivado = !!filiado.arquivado_em;
 
   return (
@@ -66,6 +69,7 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
             </View>
           </View>
           <Text style={styles.lotacao}>Lotação: {filiado.lotacao || 'Não informada'}</Text>
+          <Text style={styles.detalhe}>Situação sindical: {situacaoSindicalLabel}</Text>
           <Text style={styles.detalhe}>Telefone: {formatTelefone(filiado.telefone1) || '—'}</Text>
         </View>
       </View>

@@ -2,7 +2,21 @@
 const pool = require("../config/db");
 const filiadosService = require("./filiados.service");
 const repasseService = require("./repasse.service");
-const { SITUACAO_FUNCIONAL, LOTACOES, LOTACOES_REPASSE } = require('../shared/canon');
+const { SITUACAO_FUNCIONAL, LOTACOES, LOTACOES_REPASSE, SITUACAO_SINDICAL } = require('../shared/canon');
+
+function roundPercent(value) {
+  return Number.isFinite(value) ? Number(value.toFixed(1)) : 0;
+}
+
+function calcularPercentuaisSindicais({ efetivoTotal, filiadoSinprf, filiadoOutro }) {
+  const percentual_total = efetivoTotal > 0 ? roundPercent((filiadoSinprf / efetivoTotal) * 100) : 0;
+  const base_local_ajustada = efetivoTotal - filiadoOutro;
+  const percentual_base_ajustada = base_local_ajustada > 0
+    ? roundPercent((filiadoSinprf / base_local_ajustada) * 100)
+    : 0;
+
+  return { percentual_total, base_local_ajustada, percentual_base_ajustada };
+}
 
 /**
  * Registra um novo job de relatório para auditoria.
@@ -101,6 +115,33 @@ async function buscarDadosAgregados(tipo, valor) {
 
   // Especial: Situação ATIVO consome apenas efetivo manual para % de filiação em relatórios
   if (tipo === "SITUACAO" && valor === "ATIVO") {
+    const [sindicalCountsResult, efetivoManualTotalResult] = await Promise.all([
+      pool.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE situacao_sindical = $1)::INTEGER AS filiado_sinprf_es,
+          COUNT(*) FILTER (WHERE situacao_sindical = $2)::INTEGER AS filiado_outro_sindicato,
+          COUNT(*) FILTER (WHERE situacao_sindical = $3)::INTEGER AS nao_filiado,
+          COUNT(*) FILTER (WHERE situacao_sindical = $4)::INTEGER AS desconhecido
+        FROM filiados
+        WHERE arquivado_em IS NULL
+      `, [
+        SITUACAO_SINDICAL.FILIADO_SINPRF_ES,
+        SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO,
+        SITUACAO_SINDICAL.NAO_FILIADO,
+        SITUACAO_SINDICAL.DESCONHECIDO
+      ]),
+      pool.query(`
+        SELECT COALESCE(SUM(total_efetivo), 0)::INTEGER AS efetivo_total
+        FROM repasse_lotacao_efetivo_manual
+      `)
+    ]);
+
+    const sindical = sindicalCountsResult.rows[0] || {};
+    const efetivoTotal = Number(efetivoManualTotalResult.rows[0]?.efetivo_total || 0);
+    const filiadoSinprf = Number(sindical.filiado_sinprf_es || 0);
+    const filiadoOutro = Number(sindical.filiado_outro_sindicato || 0);
+    const percentuais = calcularPercentuaisSindicais({ efetivoTotal, filiadoSinprf, filiadoOutro });
+
     // BOLT: Parallelize repasse data fetching for all lotações.
     const breakdown = await Promise.all(LOTACOES_REPASSE.map(async (lot) => {
       const totalManual = Object.prototype.hasOwnProperty.call(efetivoManual.totais, lot)
@@ -110,6 +151,14 @@ async function buscarDadosAgregados(tipo, valor) {
       return { lotacao: lot, ...repData };
     }));
     result.repasseBreakdown = breakdown;
+    result.situacaoSindical = {
+      efetivo_total_informado: efetivoTotal,
+      filiado_sinprf_es: filiadoSinprf,
+      filiado_outro_sindicato: filiadoOutro,
+      nao_filiado: Number(sindical.nao_filiado || 0),
+      desconhecido: Number(sindical.desconhecido || 0),
+      ...percentuais
+    };
   }
 
   return result;

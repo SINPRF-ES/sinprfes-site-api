@@ -26,6 +26,15 @@ O **Canon de Paridade** é o conjunto de regras mandatórias que garantem a cons
 ### 3.2. Tratamento de Erros
 - Mensagens de erro disparadas pelo Backend devem ser exibidas de forma clara em ambas as plataformas, utilizando as strings definidas em `backend/src/utils/textos.js` quando possível.
 
+### 3.4. Classificação Sindical (dimensão cadastral)
+- O campo canônico `situacao_sindical` deve ser tratado como dimensão separada de `situacao` (funcional) e `estado_cadastro`.
+- Valores válidos: `FILIADO_SINPRF_ES`, `FILIADO_OUTRO_SINDICATO`, `NAO_FILIADO`, `DESCONHECIDO`.
+- Fórmulas canônicas de indicadores:
+  - `percentual_total = FILIADO_SINPRF_ES / EFETIVO_TOTAL`
+  - `base_local_ajustada = EFETIVO_TOTAL - FILIADO_OUTRO_SINDICATO`
+  - `percentual_base_ajustada = FILIADO_SINPRF_ES / base_local_ajustada`
+- O backend continua como SSOT dos cálculos e normalizações, e site/mobile apenas consomem os valores.
+
 ### 3.3. Permissões
 - O `roles.config.js` é o árbitro final. Se um botão é exibido no Site para um perfil X, ele deve ser exibido no App para o mesmo perfil X.
 

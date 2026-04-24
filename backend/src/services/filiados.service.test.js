@@ -35,6 +35,17 @@ describe('Filiados Service', () => {
         );
         expect(result[0]).toHaveProperty('lotacao', 'SEDE');
       });
+
+    test('should filter by situacao_sindical when provided', async () => {
+      pool.query.mockResolvedValue({ rows: [] });
+
+      await filiadosService.listarParaPerfil('ADMIN', '', false, 'NAO_FILIADO');
+
+      expect(pool.query).toHaveBeenCalledWith(
+        expect.stringContaining('f.situacao_sindical = $1'),
+        ['NAO_FILIADO']
+      );
+    });
   });
 
   describe('Parentesco OUTRO and Compaction', () => {
@@ -88,5 +99,25 @@ describe('Filiados Service', () => {
       // IRMAO is not OUTRO, so parentesco_outro should be null.
       expect(updateValues).toContain(null);
     });
+  });
+
+  test('criarFiliadoInicial should default situacao_sindical to FILIADO_SINPRF_ES', async () => {
+    jest.clearAllMocks();
+    pool.query
+      .mockResolvedValueOnce({ rows: [{ id: 99 }] })
+      .mockResolvedValueOnce({ rows: [{ id: 99, nome: 'Novo', situacao_sindical: 'FILIADO_SINPRF_ES' }] });
+
+    const novo = await filiadosService.criarFiliadoInicial({
+      nome: 'Novo Filiado',
+      cpf: '12345678901',
+      email1: 'novo@teste.com',
+      telefone1: '27999998888',
+      lotacao: 'SEDE',
+      situacao: 'ATIVO'
+    }, 'ADMIN');
+
+    expect(pool.query.mock.calls[0][0]).toContain('situacao_sindical');
+    expect(pool.query.mock.calls[0][1]).toContain('FILIADO_SINPRF_ES');
+    expect(novo.situacao_sindical).toBe('FILIADO_SINPRF_ES');
   });
 });
