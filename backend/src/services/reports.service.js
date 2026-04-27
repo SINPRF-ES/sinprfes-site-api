@@ -9,13 +9,27 @@ function roundPercent(value) {
 }
 
 function calcularPercentuaisSindicais({ efetivoTotal, filiadoSinprf, filiadoOutro }) {
-  const percentual_total = efetivoTotal > 0 ? roundPercent((filiadoSinprf / efetivoTotal) * 100) : 0;
+  const filiadosTotais = filiadoSinprf + filiadoOutro;
+  const naoFiliados = Math.max(efetivoTotal - filiadosTotais, 0);
+  const percentual_filiacao_local = efetivoTotal > 0 ? roundPercent((filiadoSinprf / efetivoTotal) * 100) : 0;
+  const percentual_filiacao_total = efetivoTotal > 0 ? roundPercent((filiadosTotais / efetivoTotal) * 100) : 0;
+  const percentual_nao_filiacao = efetivoTotal > 0 ? roundPercent((naoFiliados / efetivoTotal) * 100) : 0;
   const base_local_ajustada = efetivoTotal - filiadoOutro;
   const percentual_base_ajustada = base_local_ajustada > 0
     ? roundPercent((filiadoSinprf / base_local_ajustada) * 100)
     : 0;
 
-  return { percentual_total, base_local_ajustada, percentual_base_ajustada };
+  return {
+    filiados_totais: filiadosTotais,
+    nao_filiados_estimados_no_efetivo: naoFiliados,
+    percentual_filiacao_local,
+    percentual_filiacao_total,
+    percentual_nao_filiacao,
+    // Compatibilidade retroativa
+    percentual_total: percentual_filiacao_local,
+    base_local_ajustada,
+    percentual_base_ajustada
+  };
 }
 
 /**
@@ -60,6 +74,7 @@ async function buscarDadosDossie(filiadoId) {
 async function buscarDadosAgregados(tipo, valor) {
   let whereClause = "WHERE arquivado_em IS NULL";
   const params = [];
+  let lotacaoKeyword = null;
 
   if (tipo === "LOTACAO") {
     // Busca por keyword conforme padrão do projeto
@@ -72,8 +87,9 @@ async function buscarDadosAgregados(tipo, valor) {
         "NENHUMA": "NENHUMA"
     };
     const kw = keywords[valor] || valor;
+    lotacaoKeyword = kw.toUpperCase();
     whereClause += " AND UPPER(lotacao) LIKE $1 AND situacao = 'ATIVO' AND situacao_sindical = 'FILIADO_SINPRF_ES'";
-    params.push(`%${kw.toUpperCase()}%`);
+    params.push(`%${lotacaoKeyword}%`);
   } else if (tipo === "SITUACAO") {
     whereClause += " AND situacao = $1 AND situacao_sindical = 'FILIADO_SINPRF_ES'";
     params.push(valor);
@@ -111,6 +127,39 @@ async function buscarDadosAgregados(tipo, valor) {
       : null;
     const repasseData = await repasseService.getUltimosDadosParaRelatorioComOverride(valor, totalManual);
     result.repasse = repasseData;
+
+    const { rows } = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE situacao_sindical = $2)::INTEGER AS filiado_sinprf_es,
+        COUNT(*) FILTER (WHERE situacao_sindical = $3)::INTEGER AS filiado_outro_sindicato,
+        COUNT(*) FILTER (WHERE situacao_sindical = $4)::INTEGER AS nao_filiado,
+        COUNT(*) FILTER (WHERE situacao_sindical = $5)::INTEGER AS desconhecido
+      FROM filiados
+      WHERE arquivado_em IS NULL
+        AND situacao = 'ATIVO'
+        AND UPPER(lotacao) LIKE $1
+    `, [
+      `%${lotacaoKeyword}%`,
+      SITUACAO_SINDICAL.FILIADO_SINPRF_ES,
+      SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO,
+      SITUACAO_SINDICAL.NAO_FILIADO,
+      SITUACAO_SINDICAL.DESCONHECIDO
+    ]);
+
+    const sindical = rows[0] || {};
+    const efetivoTotal = Number(repasseData?.prfTotal || 0);
+    const filiadoSinprf = Number(sindical.filiado_sinprf_es || 0);
+    const filiadoOutro = Number(sindical.filiado_outro_sindicato || 0);
+    const percentuais = calcularPercentuaisSindicais({ efetivoTotal, filiadoSinprf, filiadoOutro });
+
+    result.situacaoSindicalLotacao = {
+      efetivo_total_informado: efetivoTotal,
+      filiado_sinprf_es: filiadoSinprf,
+      filiado_outro_sindicato: filiadoOutro,
+      nao_filiado: Number(sindical.nao_filiado || 0),
+      desconhecido: Number(sindical.desconhecido || 0),
+      ...percentuais
+    };
   }
 
   // Especial: Situação ATIVO consome apenas efetivo manual para % de filiação em relatórios
