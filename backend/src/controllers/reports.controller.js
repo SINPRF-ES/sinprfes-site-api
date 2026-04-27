@@ -224,12 +224,18 @@ exports.previewReport = async (req, res) => {
       });
 
       if (data.repasse) {
+        const local = data.situacaoSindicalLotacao;
         sections.push({
           kind: "kv",
           title: "Dados do Repasse",
           items: [
             { label: "PRF Total (Efetivo)", value: data.repasse.prfTotal || "Não informado" },
-            { label: "Percentual de Filiação", value: data.repasse.percentual ? `${data.repasse.percentual.toFixed(1)}%` : "N/A" }
+            { label: "Filiados SINPRF/ES (local)", value: local?.filiado_sinprf_es ?? data.repasse.filiadosAtivos ?? "-" },
+            { label: "Filiados em outros sindicatos", value: local?.filiado_outro_sindicato ?? "-" },
+            { label: "Não filiados (cadastro)", value: local?.nao_filiado ?? "-" },
+            { label: "% filiação local (SINPRF/ES x efetivo)", value: local ? `${local.percentual_filiacao_local}%` : (data.repasse.percentual ? `${data.repasse.percentual.toFixed(1)}%` : "N/A") },
+            { label: "% filiação total (qualquer sindicato x efetivo)", value: local ? `${local.percentual_filiacao_total}%` : "N/A" },
+            { label: "% não filiação (sobre efetivo total)", value: local ? `${local.percentual_nao_filiacao}%` : "N/A" }
           ]
         });
       }

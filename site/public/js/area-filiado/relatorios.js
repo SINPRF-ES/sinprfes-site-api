@@ -333,18 +333,21 @@
 
         container.innerHTML = html;
 
-        if (!document.getElementById('style-preview-relatorios')) {
-            const s = document.createElement('style');
+        let s = document.getElementById('style-preview-relatorios');
+        if (!s) {
+            s = document.createElement('style');
             s.id = 'style-preview-relatorios';
-            s.textContent = `
+            document.head.appendChild(s);
+        }
+        s.textContent = `
                 #relatorio-preview-container {
-                    border: 1px solid #d0d5dd;
-                    background: #ffffff;
-                    color: #0f172a;
+                    border: 1px solid #94a3b8 !important;
+                    background: #f8fafc !important;
+                    color: #0f172a !important;
                 }
                 .relatorio-preview-header {
-                    background: #0b3a67;
-                    color: #f8fafc;
+                    background: #0b3a67 !important;
+                    color: #f8fafc !important;
                     padding: 20px;
                     display: flex;
                     justify-content: space-between;
@@ -353,14 +356,15 @@
                 }
                 .relatorio-preview-title {
                     margin: 0;
-                    color: #ffd84d;
+                    color: #ffde59 !important;
                     font-size: 1.4rem;
+                    font-weight: 800;
                 }
                 .relatorio-preview-meta {
                     font-size: 0.82rem;
                     margin-top: 8px;
                     opacity: 0.95;
-                    color: #dbe7f3;
+                    color: #e2e8f0 !important;
                 }
                 .relatorio-preview-close-top {
                     background: #ffffff;
@@ -373,8 +377,8 @@
                 }
                 .relatorio-preview-body {
                     padding: 25px;
-                    background: #ffffff;
-                    color: #0f172a;
+                    background: #f8fafc !important;
+                    color: #0f172a !important;
                 }
                 .relatorio-preview-section {
                     margin-bottom: 30px;
@@ -382,7 +386,7 @@
                 .relatorio-preview-section-title {
                     border-bottom: 2px solid #ffd84d;
                     padding-bottom: 5px;
-                    color: #0b3a67;
+                    color: #0b3a67 !important;
                     margin-bottom: 15px;
                 }
                 .relatorio-preview-kv-grid {
@@ -392,9 +396,9 @@
                 }
                 .relatorio-preview-kv-item {
                     padding: 12px;
-                    border: 1px solid #e2e8f0;
+                    border: 1px solid #cbd5e1;
                     border-radius: 8px;
-                    background: #f8fafc;
+                    background: #ffffff !important;
                 }
                 .relatorio-preview-kv-label {
                     display: block;
@@ -417,7 +421,7 @@
                     border: 1px solid #d0d5dd;
                 }
                 .relatorio-preview-table thead tr {
-                    background: #eaf2fa;
+                    background: #dbeafe !important;
                 }
                 .relatorio-preview-table th {
                     border: 1px solid #d0d5dd;
@@ -445,8 +449,6 @@
                 .repasse-tabela tbody tr:nth-child(even) { background: #fafafa; }
                 .repasse-tabela tbody tr:hover { background: #f1f3f5; }
             `;
-            document.head.appendChild(s);
-        }
     }
 
     async function carregarHistorico() {

@@ -29,4 +29,21 @@ describe('reports.service - situacao_sindical metrics', () => {
     expect(data.situacaoSindical.percentual_total).toBe(40);
     expect(data.situacaoSindical.percentual_base_ajustada).toBeCloseTo(44.4, 1);
   });
+
+  test('em LOTACAO separa filiação local x outros sindicatos', async () => {
+    pool.query
+      .mockResolvedValueOnce({ rows: [{ total: 38, masc: 30, fem: 8 }] })
+      .mockResolvedValueOnce({ rows: [{ filiado_sinprf_es: 38, filiado_outro_sindicato: 2, nao_filiado: 0, desconhecido: 0 }] });
+
+    repasseService.getEfetivoManualLotacoes.mockResolvedValue({ totais: { 'SEDE': 40 } });
+    repasseService.getUltimosDadosParaRelatorioComOverride.mockResolvedValue({ prfTotal: 40, filiadosAtivos: 38, percentual: 95 });
+
+    const data = await reportsService.buscarDadosAgregados('LOTACAO', 'SEDE');
+
+    expect(data.situacaoSindicalLotacao.filiado_sinprf_es).toBe(38);
+    expect(data.situacaoSindicalLotacao.filiado_outro_sindicato).toBe(2);
+    expect(data.situacaoSindicalLotacao.percentual_filiacao_local).toBe(95);
+    expect(data.situacaoSindicalLotacao.percentual_filiacao_total).toBe(100);
+    expect(data.situacaoSindicalLotacao.percentual_nao_filiacao).toBe(0);
+  });
 });
