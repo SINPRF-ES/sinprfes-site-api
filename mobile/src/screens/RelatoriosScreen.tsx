@@ -52,6 +52,7 @@ export default function RelatoriosScreen() {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [efetivoManual, setEfetivoManual] = useState<Record<string, string>>({});
   const [savingEfetivo, setSavingEfetivo] = useState(false);
+  const [showManualEfetivo, setShowManualEfetivo] = useState(false);
 
 
   const isGestao = useMemo(() => {
@@ -290,6 +291,7 @@ export default function RelatoriosScreen() {
             <TextInput
               style={styles.modalSearchInput}
               placeholder="Nome ou CPF..."
+              placeholderTextColor="#667085"
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoFocus
@@ -337,46 +339,6 @@ export default function RelatoriosScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchHistory(true)} />}
       >
-
-        {isGestao && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>🧮 Efetivo Total PRF por Lotação</Text>
-            <Text style={styles.helperText}>
-              Preencha os totais de efetivo (filiados e não filiados) para cálculo do % de filiação nos relatórios.
-            </Text>
-
-            {lotacoesEfetivo.map((lot) => (
-              <View key={lot} style={{ marginBottom: 12 }}>
-                <Text style={styles.label}>{lot}</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  value={efetivoManual[lot] ?? ''}
-                  onChangeText={(v) => setEfetivoManual((prev) => ({ ...prev, [lot]: v.replace(/[^0-9]/g, '') }))}
-                  placeholder="Ex: 100"
-                />
-              </View>
-            ))}
-
-            <View style={styles.inlineButtons}>
-              <TouchableOpacity
-                style={[styles.buttonSecondary, styles.inlineButton, savingEfetivo && styles.buttonDisabled]}
-                onPress={carregarEfetivoManual}
-                disabled={savingEfetivo}
-              >
-                <Text style={styles.buttonSecondaryText}>Atualizar dados</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.inlineButton, savingEfetivo && styles.buttonDisabled]}
-                onPress={salvarEfetivoManual}
-                disabled={savingEfetivo}
-              >
-                {savingEfetivo ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Salvar efetivo manual</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📊 Gerar Novo Relatório</Text>
@@ -553,6 +515,61 @@ export default function RelatoriosScreen() {
             </>
           )}
         </View>
+
+        {isGestao && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🛟 Modo contingência</Text>
+            <Text style={styles.helperText}>
+              O padrão é cálculo automático pelo cadastro estadual. Use ajuste manual apenas em exceções.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.buttonSecondary}
+              onPress={() => setShowManualEfetivo((prev) => !prev)}
+            >
+              <Text style={styles.buttonSecondaryText}>
+                {showManualEfetivo ? 'Ocultar ajuste manual' : 'Exibir ajuste manual de efetivo'}
+              </Text>
+            </TouchableOpacity>
+
+            {showManualEfetivo && (
+              <View style={{ marginTop: 14 }}>
+                <Text style={styles.cardSubtitle}>🧮 Efetivo Total PRF por Lotação</Text>
+                {lotacoesEfetivo.map((lot) => (
+                  <View key={lot} style={{ marginBottom: 12 }}>
+                    <Text style={styles.label}>{lot}</Text>
+                    <TextInput
+                      style={styles.input}
+                      keyboardType="numeric"
+                      value={efetivoManual[lot] ?? ''}
+                      onChangeText={(v) => setEfetivoManual((prev) => ({ ...prev, [lot]: v.replace(/[^0-9]/g, '') }))}
+                      placeholder="Ex: 100"
+                      placeholderTextColor="#667085"
+                    />
+                  </View>
+                ))}
+
+                <View style={styles.inlineButtons}>
+                  <TouchableOpacity
+                    style={[styles.buttonSecondary, styles.inlineButton, savingEfetivo && styles.buttonDisabled]}
+                    onPress={carregarEfetivoManual}
+                    disabled={savingEfetivo}
+                  >
+                    <Text style={styles.buttonSecondaryText}>Atualizar dados</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.button, styles.inlineButton, savingEfetivo && styles.buttonDisabled]}
+                    onPress={salvarEfetivoManual}
+                    disabled={savingEfetivo}
+                  >
+                    {savingEfetivo ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Salvar efetivo manual</Text>}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
     </SafeScreen>
   );
@@ -573,6 +590,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#003366', marginBottom: 16 },
+  cardSubtitle: { fontSize: 16, fontWeight: '700', color: '#003366', marginBottom: 12 },
   label: { fontSize: 14, color: '#666', marginBottom: 8, fontWeight: 'bold' },
 
   helperText: { color: '#475467', fontSize: 13, marginTop: -6, marginBottom: 12 },
@@ -649,7 +667,7 @@ const styles = StyleSheet.create({
   buttonSecondaryText: { color: '#003366', fontSize: 15, fontWeight: 'bold' },
   previewContainer: {
     marginTop: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     elevation: 4,
@@ -664,11 +682,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#d0d5dd',
     paddingBottom: 10,
   },
   previewTitle: { fontSize: 18, fontWeight: 'bold', color: '#003366' },
-  previewSubtitle: { fontSize: 11, color: '#666' },
+  previewSubtitle: { fontSize: 11, color: '#344054' },
   previewSection: { marginBottom: 25 },
   previewSectionTitle: {
     fontSize: 14,
@@ -681,15 +699,15 @@ const styles = StyleSheet.create({
   },
   kvContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 15 },
   kvItem: { width: '45%' },
-  kvLabel: { fontSize: 10, color: '#777', textTransform: 'uppercase' },
-  kvValue: { fontSize: 13, color: '#333', fontWeight: '500' },
-  tableContainer: { borderWidth: 1, borderColor: '#eee', borderRadius: 8, overflow: 'hidden' },
-  tableHeader: { flexDirection: 'row', backgroundColor: '#f1f3f5' },
-  tableHeaderCell: { padding: 10, borderRightWidth: 1, borderRightColor: '#eee' },
+  kvLabel: { fontSize: 10, color: '#334155', textTransform: 'uppercase', fontWeight: '700' },
+  kvValue: { fontSize: 13, color: '#101828', fontWeight: '600' },
+  tableContainer: { borderWidth: 1, borderColor: '#d0d5dd', borderRadius: 8, overflow: 'hidden' },
+  tableHeader: { flexDirection: 'row', backgroundColor: '#eaf2fa' },
+  tableHeaderCell: { padding: 10, borderRightWidth: 1, borderRightColor: '#d0d5dd' },
   tableHeaderText: { fontSize: 11, fontWeight: 'bold', color: '#003366', textAlign: 'center' },
-  tableRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#eee' },
-  tableCell: { padding: 10, borderRightWidth: 1, borderRightColor: '#eee', justifyContent: 'center' },
-  tableCellText: { fontSize: 12, color: '#333', textAlign: 'center' },
+  tableRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#d0d5dd' },
+  tableCell: { padding: 10, borderRightWidth: 1, borderRightColor: '#d0d5dd', justifyContent: 'center' },
+  tableCellText: { fontSize: 12, color: '#101828', textAlign: 'center' },
   closePreviewButton: {
     marginTop: 10,
     padding: 12,
@@ -725,11 +743,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
     maxHeight: Dimensions.get('window').height * 0.8,
+    borderWidth: 1,
+    borderColor: '#d0d5dd',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -737,23 +757,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15,
   },
-  modalTitle: { fontSize: 18, fontWeight: 'bold' },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#101828' },
   modalSearchInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#98a2b3',
     borderRadius: 8,
     padding: 10,
     fontSize: 16,
     marginBottom: 15,
+    color: '#101828',
+    backgroundColor: '#f8fafc',
   },
   modalItem: {
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  modalItemName: { fontSize: 16, color: '#333' },
-  modalItemCpf: { fontSize: 12, color: '#999' },
-  modalEmptyText: { textAlign: 'center', color: '#999', marginTop: 20 },
+  modalItemName: { fontSize: 16, color: '#101828' },
+  modalItemCpf: { fontSize: 12, color: '#475467' },
+  modalEmptyText: { textAlign: 'center', color: '#475467', marginTop: 20 },
   showMoreButton: {
     marginTop: 8,
     padding: 12,

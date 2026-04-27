@@ -49,18 +49,22 @@
 
 
     function configurarEfetivoManual() {
+        const wrapper = document.getElementById('relatorio-contingencia-wrapper');
+        const btnToggle = document.getElementById('btn-relatorio-toggle-contingencia');
         const card = document.getElementById('relatorio-efetivo-manual-card');
         const grid = document.getElementById('relatorio-efetivo-manual-grid');
         const btnSalvar = document.getElementById('btn-relatorio-efetivo-salvar');
         const btnRecarregar = document.getElementById('btn-relatorio-efetivo-recarregar');
 
-        if (!card || !grid || !btnSalvar || !btnRecarregar) return;
+        if (!wrapper || !btnToggle || !card || !grid || !btnSalvar || !btnRecarregar) return;
         if (!ehPerfilGestao()) {
+            wrapper.style.display = 'none';
             card.style.display = 'none';
             return;
         }
 
-        card.style.display = 'block';
+        wrapper.style.display = 'block';
+        card.style.display = 'none';
         grid.innerHTML = LOTACOES_RELATORIO.map((lot) => `
             <div class="field-group">
                 <label for="efetivo-manual-${lot.replace(/[^a-z0-9]/gi, "-").toLowerCase()}">${lot}</label>
@@ -68,6 +72,11 @@
             </div>
         `).join('');
 
+        btnToggle.onclick = () => {
+            const aberto = card.style.display !== 'none';
+            card.style.display = aberto ? 'none' : 'block';
+            btnToggle.textContent = aberto ? 'Exibir ajuste manual de efetivo' : 'Ocultar ajuste manual de efetivo';
+        };
         btnSalvar.onclick = salvarEfetivoManual;
         btnRecarregar.onclick = carregarEfetivoManual;
         carregarEfetivoManual();
@@ -271,27 +280,27 @@
         container.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
         let html = `
-            <div style="background: var(--azul-fundo); color: #fff; padding: 20px; display: flex; justify-content: space-between; align-items: flex-start;">
+            <div class="relatorio-preview-header">
                 <div>
-                    <h2 style="margin:0; color:var(--amarelo); font-size: 1.4rem;">👁️ Visualização do Relatório</h2>
-                    <div style="font-size:0.8rem; margin-top:8px; opacity:0.8;">
+                    <h2 class="relatorio-preview-title">👁️ Visualização do Relatório</h2>
+                    <div class="relatorio-preview-meta">
                         <div>Consulta gerada em: ${new Date(data.generatedAt).toLocaleString('pt-BR')}</div>
                         ${data.baseCompetencia ? `<div>Base do efetivo: ${data.baseCompetencia}</div>` : ''}
                     </div>
                 </div>
-                <button onclick="document.getElementById('relatorio-preview-container').style.display='none'" style="background:none; border:1px solid rgba(255,255,255,0.3); color:#fff; border-radius: 4px; padding: 4px 10px; cursor:pointer;">Fechar</button>
+                <button class="relatorio-preview-close-top" onclick="document.getElementById('relatorio-preview-container').style.display='none'">Fechar</button>
             </div>
-            <div style="padding: 25px; background: #fff; color: #333;">
+            <div class="relatorio-preview-body">
                 ${data.sections.map(section => {
                     if (section.kind === 'kv') {
                         return `
-                            <div style="margin-bottom:30px;">
-                                <h4 style="border-bottom:2px solid var(--amarelo); padding-bottom:5px; color:var(--azul-fundo); margin-bottom: 15px;">${safeEscape(section.title)}</h4>
-                                <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:20px;">
+                            <div class="relatorio-preview-section">
+                                <h4 class="relatorio-preview-section-title">${safeEscape(section.title)}</h4>
+                                <div class="relatorio-preview-kv-grid">
                                     ${section.items.map(item => `
-                                        <div>
-                                            <span style="display:block; font-size:0.75rem; color:#777; text-transform: uppercase; font-weight: bold;">${safeEscape(item.label)}</span>
-                                            <span style="font-size: 1rem; color: #333;">${safeEscape(item.value)}</span>
+                                        <div class="relatorio-preview-kv-item">
+                                            <span class="relatorio-preview-kv-label">${safeEscape(item.label)}</span>
+                                            <span class="relatorio-preview-kv-value">${safeEscape(item.value)}</span>
                                         </div>
                                     `).join('')}
                                 </div>
@@ -299,19 +308,19 @@
                         `;
                     } else if (section.kind === 'table') {
                         return `
-                            <div style="margin-bottom:30px;">
-                                <h4 style="border-bottom:2px solid var(--amarelo); padding-bottom:5px; color:var(--azul-fundo); margin-bottom: 15px;">${safeEscape(section.title)}</h4>
+                            <div class="relatorio-preview-section">
+                                <h4 class="relatorio-preview-section-title">${safeEscape(section.title)}</h4>
                                 <div class="ui-table-wrapper">
-                                    <table class="repasse-tabela ui-table" style="width:100%; border-collapse:collapse; font-size:0.9rem; border: 1px solid #ddd;">
+                                    <table class="repasse-tabela ui-table relatorio-preview-table">
                                         <thead>
-                                            <tr style="background:#f8f9fa;">
-                                                ${section.columns.map(col => `<th style="border:1px solid #ddd; padding:12px 10px; text-align:left; color: var(--azul-fundo);">${safeEscape(col)}</th>`).join('')}
+                                            <tr>
+                                                ${section.columns.map(col => `<th>${safeEscape(col)}</th>`).join('')}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             ${section.rows.map(row => `
                                                 <tr>
-                                                    ${row.map(cell => `<td style="border:1px solid #ddd; padding:12px 10px;">${safeEscape(cell)}</td>`).join('')}
+                                                    ${row.map(cell => `<td>${safeEscape(cell)}</td>`).join('')}
                                                 </tr>
                                             `).join('')}
                                         </tbody>
@@ -323,8 +332,8 @@
                     return '';
                 }).join('')}
 
-                <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-                    <button class="btn btn-outline" style="color: var(--azul-fundo); border-color: var(--azul-fundo);" onclick="document.getElementById('relatorio-preview-container').style.display='none'">
+                <div class="relatorio-preview-actions">
+                    <button class="btn btn-outline relatorio-preview-close-bottom" onclick="document.getElementById('relatorio-preview-container').style.display='none'">
                         Ocultar Visualização
                     </button>
                 </div>
@@ -333,15 +342,122 @@
 
         container.innerHTML = html;
 
-        if (!document.getElementById('style-preview-relatorios')) {
-            const s = document.createElement('style');
+        let s = document.getElementById('style-preview-relatorios');
+        if (!s) {
+            s = document.createElement('style');
             s.id = 'style-preview-relatorios';
-            s.textContent = `
+            document.head.appendChild(s);
+        }
+        s.textContent = `
+                #relatorio-preview-container {
+                    border: 1px solid #94a3b8 !important;
+                    background: #f8fafc !important;
+                    color: #0f172a !important;
+                }
+                .relatorio-preview-header {
+                    background: #0b3a67 !important;
+                    color: #f8fafc !important;
+                    padding: 20px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    gap: 16px;
+                }
+                .relatorio-preview-title {
+                    margin: 0;
+                    color: #ffde59 !important;
+                    font-size: 1.4rem;
+                    font-weight: 800;
+                }
+                .relatorio-preview-meta {
+                    font-size: 0.82rem;
+                    margin-top: 8px;
+                    opacity: 0.95;
+                    color: #e2e8f0 !important;
+                }
+                .relatorio-preview-close-top {
+                    background: #ffffff;
+                    border: 1px solid #cbd5e1;
+                    color: #0b3a67;
+                    border-radius: 6px;
+                    padding: 6px 10px;
+                    cursor: pointer;
+                    font-weight: 600;
+                }
+                .relatorio-preview-body {
+                    padding: 25px;
+                    background: #f8fafc !important;
+                    color: #0f172a !important;
+                }
+                .relatorio-preview-section {
+                    margin-bottom: 30px;
+                }
+                .relatorio-preview-section-title {
+                    border-bottom: 2px solid #ffd84d;
+                    padding-bottom: 5px;
+                    color: #0b3a67 !important;
+                    margin-bottom: 15px;
+                }
+                .relatorio-preview-kv-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                    gap: 14px;
+                }
+                .relatorio-preview-kv-item {
+                    padding: 12px;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 8px;
+                    background: #ffffff !important;
+                }
+                .relatorio-preview-kv-label {
+                    display: block;
+                    font-size: 0.75rem;
+                    color: #334155;
+                    text-transform: uppercase;
+                    font-weight: 700;
+                }
+                .relatorio-preview-kv-value {
+                    font-size: 1rem;
+                    color: #0f172a;
+                    font-weight: 600;
+                    margin-top: 4px;
+                    display: inline-block;
+                }
+                .relatorio-preview-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 0.92rem;
+                    border: 1px solid #d0d5dd;
+                }
+                .relatorio-preview-table thead tr {
+                    background: #dbeafe !important;
+                }
+                .relatorio-preview-table th {
+                    border: 1px solid #d0d5dd;
+                    padding: 12px 10px;
+                    text-align: left;
+                    color: #0b3a67;
+                    font-weight: 700;
+                }
+                .relatorio-preview-table td {
+                    border: 1px solid #d0d5dd;
+                    padding: 12px 10px;
+                    color: #0f172a;
+                }
+                .relatorio-preview-actions {
+                    text-align: center;
+                    margin-top: 20px;
+                    padding-top: 20px;
+                    border-top: 1px solid #e2e8f0;
+                }
+                .relatorio-preview-close-bottom {
+                    color: #0b3a67 !important;
+                    border-color: #0b3a67 !important;
+                    font-weight: 600;
+                }
                 .repasse-tabela tbody tr:nth-child(even) { background: #fafafa; }
                 .repasse-tabela tbody tr:hover { background: #f1f3f5; }
             `;
-            document.head.appendChild(s);
-        }
     }
 
     async function carregarHistorico() {
