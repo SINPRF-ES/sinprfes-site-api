@@ -52,6 +52,7 @@ export default function RelatoriosScreen() {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [efetivoManual, setEfetivoManual] = useState<Record<string, string>>({});
   const [savingEfetivo, setSavingEfetivo] = useState(false);
+  const [showManualEfetivo, setShowManualEfetivo] = useState(false);
 
 
   const isGestao = useMemo(() => {
@@ -339,46 +340,6 @@ export default function RelatoriosScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchHistory(true)} />}
       >
 
-        {isGestao && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>🧮 Efetivo Total PRF por Lotação</Text>
-            <Text style={styles.helperText}>
-              Preencha os totais de efetivo (filiados e não filiados) para cálculo do % de filiação nos relatórios.
-            </Text>
-
-            {lotacoesEfetivo.map((lot) => (
-              <View key={lot} style={{ marginBottom: 12 }}>
-                <Text style={styles.label}>{lot}</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  value={efetivoManual[lot] ?? ''}
-                  onChangeText={(v) => setEfetivoManual((prev) => ({ ...prev, [lot]: v.replace(/[^0-9]/g, '') }))}
-                  placeholder="Ex: 100"
-                />
-              </View>
-            ))}
-
-            <View style={styles.inlineButtons}>
-              <TouchableOpacity
-                style={[styles.buttonSecondary, styles.inlineButton, savingEfetivo && styles.buttonDisabled]}
-                onPress={carregarEfetivoManual}
-                disabled={savingEfetivo}
-              >
-                <Text style={styles.buttonSecondaryText}>Atualizar dados</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.inlineButton, savingEfetivo && styles.buttonDisabled]}
-                onPress={salvarEfetivoManual}
-                disabled={savingEfetivo}
-              >
-                {savingEfetivo ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Salvar efetivo manual</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📊 Gerar Novo Relatório</Text>
 
@@ -554,6 +515,61 @@ export default function RelatoriosScreen() {
             </>
           )}
         </View>
+
+        {isGestao && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🛟 Modo contingência</Text>
+            <Text style={styles.helperText}>
+              O padrão é cálculo automático pelo cadastro estadual. Use ajuste manual apenas em exceções.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.buttonSecondary}
+              onPress={() => setShowManualEfetivo((prev) => !prev)}
+            >
+              <Text style={styles.buttonSecondaryText}>
+                {showManualEfetivo ? 'Ocultar ajuste manual' : 'Exibir ajuste manual de efetivo'}
+              </Text>
+            </TouchableOpacity>
+
+            {showManualEfetivo && (
+              <View style={{ marginTop: 14 }}>
+                <Text style={styles.cardSubtitle}>🧮 Efetivo Total PRF por Lotação</Text>
+                {lotacoesEfetivo.map((lot) => (
+                  <View key={lot} style={{ marginBottom: 12 }}>
+                    <Text style={styles.label}>{lot}</Text>
+                    <TextInput
+                      style={styles.input}
+                      keyboardType="numeric"
+                      value={efetivoManual[lot] ?? ''}
+                      onChangeText={(v) => setEfetivoManual((prev) => ({ ...prev, [lot]: v.replace(/[^0-9]/g, '') }))}
+                      placeholder="Ex: 100"
+                      placeholderTextColor="#667085"
+                    />
+                  </View>
+                ))}
+
+                <View style={styles.inlineButtons}>
+                  <TouchableOpacity
+                    style={[styles.buttonSecondary, styles.inlineButton, savingEfetivo && styles.buttonDisabled]}
+                    onPress={carregarEfetivoManual}
+                    disabled={savingEfetivo}
+                  >
+                    <Text style={styles.buttonSecondaryText}>Atualizar dados</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.button, styles.inlineButton, savingEfetivo && styles.buttonDisabled]}
+                    onPress={salvarEfetivoManual}
+                    disabled={savingEfetivo}
+                  >
+                    {savingEfetivo ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Salvar efetivo manual</Text>}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
     </SafeScreen>
   );
@@ -574,6 +590,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#003366', marginBottom: 16 },
+  cardSubtitle: { fontSize: 16, fontWeight: '700', color: '#003366', marginBottom: 12 },
   label: { fontSize: 14, color: '#666', marginBottom: 8, fontWeight: 'bold' },
 
   helperText: { color: '#475467', fontSize: 13, marginTop: -6, marginBottom: 12 },

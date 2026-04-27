@@ -49,18 +49,22 @@
 
 
     function configurarEfetivoManual() {
+        const wrapper = document.getElementById('relatorio-contingencia-wrapper');
+        const btnToggle = document.getElementById('btn-relatorio-toggle-contingencia');
         const card = document.getElementById('relatorio-efetivo-manual-card');
         const grid = document.getElementById('relatorio-efetivo-manual-grid');
         const btnSalvar = document.getElementById('btn-relatorio-efetivo-salvar');
         const btnRecarregar = document.getElementById('btn-relatorio-efetivo-recarregar');
 
-        if (!card || !grid || !btnSalvar || !btnRecarregar) return;
+        if (!wrapper || !btnToggle || !card || !grid || !btnSalvar || !btnRecarregar) return;
         if (!ehPerfilGestao()) {
+            wrapper.style.display = 'none';
             card.style.display = 'none';
             return;
         }
 
-        card.style.display = 'block';
+        wrapper.style.display = 'block';
+        card.style.display = 'none';
         grid.innerHTML = LOTACOES_RELATORIO.map((lot) => `
             <div class="field-group">
                 <label for="efetivo-manual-${lot.replace(/[^a-z0-9]/gi, "-").toLowerCase()}">${lot}</label>
@@ -68,6 +72,11 @@
             </div>
         `).join('');
 
+        btnToggle.onclick = () => {
+            const aberto = card.style.display !== 'none';
+            card.style.display = aberto ? 'none' : 'block';
+            btnToggle.textContent = aberto ? 'Exibir ajuste manual de efetivo' : 'Ocultar ajuste manual de efetivo';
+        };
         btnSalvar.onclick = salvarEfetivoManual;
         btnRecarregar.onclick = carregarEfetivoManual;
         carregarEfetivoManual();
