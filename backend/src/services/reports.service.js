@@ -110,22 +110,12 @@ async function buscarDadosAgregados(tipo, valor) {
     ${whereClause}
   `;
 
-  // BOLT: Parallelize main filiado count and repasse data fetching when possible.
-  const [filiadosResult, efetivoManual] = await Promise.all([
-    pool.query(query, params),
-    (tipo === "LOTACAO" || (tipo === "SITUACAO" && valor === "ATIVO"))
-      ? repasseService.getEfetivoManualLotacoes()
-      : Promise.resolve(null)
-  ]);
-
+  const filiadosResult = await pool.query(query, params);
   const result = filiadosResult.rows[0];
 
-  // Adiciona dados do Repasse se for relatório por Lotação
+  // Adiciona dados do Repasse se for relatório por Lotação (sempre automático, sem override manual)
   if (tipo === "LOTACAO") {
-    const totalManual = Object.prototype.hasOwnProperty.call(efetivoManual.totais, valor)
-      ? efetivoManual.totais[valor]
-      : null;
-    const repasseData = await repasseService.getUltimosDadosParaRelatorioComOverride(valor, totalManual);
+    const repasseData = await repasseService.getUltimosDadosParaRelatorio(valor);
     result.repasse = repasseData;
 
     const { rows } = await pool.query(`
@@ -162,9 +152,9 @@ async function buscarDadosAgregados(tipo, valor) {
     };
   }
 
-  // Especial: Situação ATIVO consome apenas efetivo manual para % de filiação em relatórios
+  // Especial: Situação ATIVO usa efetivo automático do cadastro estadual (sem tabela manual)
   if (tipo === "SITUACAO" && valor === "ATIVO") {
-    const [sindicalCountsResult, efetivoManualTotalResult] = await Promise.all([
+    const [sindicalCountsResult, efetivoTotalCadastroResult] = await Promise.all([
       pool.query(`
         SELECT
           COUNT(*) FILTER (WHERE situacao_sindical = $1)::INTEGER AS filiado_sinprf_es,
@@ -180,23 +170,22 @@ async function buscarDadosAgregados(tipo, valor) {
         SITUACAO_SINDICAL.DESCONHECIDO
       ]),
       pool.query(`
-        SELECT COALESCE(SUM(total_efetivo), 0)::INTEGER AS efetivo_total
-        FROM repasse_lotacao_efetivo_manual
+        SELECT COUNT(*)::INTEGER AS efetivo_total
+        FROM filiados
+        WHERE arquivado_em IS NULL
+          AND situacao = 'ATIVO'
       `)
     ]);
 
     const sindical = sindicalCountsResult.rows[0] || {};
-    const efetivoTotal = Number(efetivoManualTotalResult.rows[0]?.efetivo_total || 0);
+    const efetivoTotal = Number(efetivoTotalCadastroResult.rows[0]?.efetivo_total || 0);
     const filiadoSinprf = Number(sindical.filiado_sinprf_es || 0);
     const filiadoOutro = Number(sindical.filiado_outro_sindicato || 0);
     const percentuais = calcularPercentuaisSindicais({ efetivoTotal, filiadoSinprf, filiadoOutro });
 
-    // BOLT: Parallelize repasse data fetching for all lotações.
+    // BOLT: Parallelize repasse data fetching for all lotações (automático).
     const breakdown = await Promise.all(LOTACOES_REPASSE.map(async (lot) => {
-      const totalManual = Object.prototype.hasOwnProperty.call(efetivoManual.totais, lot)
-        ? efetivoManual.totais[lot]
-        : null;
-      const repData = await repasseService.getUltimosDadosParaRelatorioComOverride(lot, totalManual);
+      const repData = await repasseService.getUltimosDadosParaRelatorio(lot);
       return { lotacao: lot, ...repData };
     }));
     result.repasseBreakdown = breakdown;

@@ -14,8 +14,7 @@ describe('reports.service - situacao_sindical metrics', () => {
       .mockResolvedValueOnce({ rows: [{ filiado_sinprf_es: 40, filiado_outro_sindicato: 10, nao_filiado: 5, desconhecido: 2 }] })
       .mockResolvedValueOnce({ rows: [{ efetivo_total: 100 }] });
 
-    repasseService.getEfetivoManualLotacoes.mockResolvedValue({ totais: { 'SEDE': 100 } });
-    repasseService.getUltimosDadosParaRelatorioComOverride.mockResolvedValue({ prfTotal: 100, filiadosAtivos: 10, percentual: 10 });
+    repasseService.getUltimosDadosParaRelatorio.mockResolvedValue({ prfTotal: 100, filiadosAtivos: 10, percentual: 10 });
 
     const data = await reportsService.buscarDadosAgregados('SITUACAO', 'ATIVO');
 
@@ -35,8 +34,7 @@ describe('reports.service - situacao_sindical metrics', () => {
       .mockResolvedValueOnce({ rows: [{ total: 38, masc: 30, fem: 8 }] })
       .mockResolvedValueOnce({ rows: [{ filiado_sinprf_es: 38, filiado_outro_sindicato: 2, nao_filiado: 0, desconhecido: 0 }] });
 
-    repasseService.getEfetivoManualLotacoes.mockResolvedValue({ totais: { 'SEDE': 40 } });
-    repasseService.getUltimosDadosParaRelatorioComOverride.mockResolvedValue({ prfTotal: 40, filiadosAtivos: 38, percentual: 95 });
+    repasseService.getUltimosDadosParaRelatorio.mockResolvedValue({ prfTotal: 40, filiadosAtivos: 38, percentual: 95 });
 
     const data = await reportsService.buscarDadosAgregados('LOTACAO', 'SEDE');
 
