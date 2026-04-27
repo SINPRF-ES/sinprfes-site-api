@@ -740,7 +740,7 @@ exports.criarFiliado = async (req, res) => {
       }
     }
 
-    if (ehFiliadoEfetivo && body.cpf) {
+    if (body.cpf) {
       const cpfLimpo = normalizarCpf(body.cpf);
       if (cpfLimpo.length !== 11) {
         return res.status(400).json({ success: false, message: "CPF inválido (deve ter 11 dígitos).", requestId });
@@ -750,6 +750,14 @@ exports.criarFiliado = async (req, res) => {
 
       if (checkCpf.rows.length > 0) {
         return res.status(409).json({ success: false, message: `CPF já pertence ao filiado: ${checkCpf.rows[0].nome}.`, requestId });
+      }
+    }
+
+    if (body.siape) {
+      const siapeLimpo = String(body.siape).replace(/\D/g, "").slice(0, 7);
+      const checkSiape = await pool.query("SELECT nome FROM filiados WHERE siape = $1 LIMIT 1", [siapeLimpo]);
+      if (checkSiape.rows.length > 0) {
+        return res.status(409).json({ success: false, message: `Matrícula (SIAPE) já pertence ao filiado: ${checkSiape.rows[0].nome}.`, requestId });
       }
     }
 
@@ -767,7 +775,7 @@ exports.criarFiliado = async (req, res) => {
     const dadosNovo = {
       nome: String(body.nome).trim(),
       sexo: body.sexo ? normalizeSexo(body.sexo) : null,
-      cpf: ehFiliadoEfetivo && body.cpf ? normalizarCpf(body.cpf) : null,
+      cpf: body.cpf ? normalizarCpf(body.cpf) : null,
       siape: body.siape ? String(body.siape).replace(/\D/g, "").slice(0, 7) : null,
       data_nascimento: parseDateToISO(body.data_nascimento),
       telefone1: body.telefone1 ? normalizeTelefone(body.telefone1) : null,
@@ -809,6 +817,8 @@ exports.criarFiliado = async (req, res) => {
 
     const isCpfDuplicadoError = err?.code === "CPF_DUPLICADO"
       || (err?.code === "23505" && err?.constraint === "filiados_cpf_key");
+    const isSiapeDuplicadoError = err?.code === "SIAPE_DUPLICADO"
+      || (err?.code === "23505" && err?.constraint === "filiados_siape_key");
 
     if (isCpfDuplicadoError) {
       const cpfDuplicado = normalizarCpf(req.body?.cpf || "");
@@ -839,6 +849,39 @@ exports.criarFiliado = async (req, res) => {
         success: false,
         message: mensagemDuplicidade,
         code: "CPF_DUPLICADO",
+        requestId
+      });
+    }
+
+    if (isSiapeDuplicadoError) {
+      const siapeDuplicado = String(req.body?.siape || "").replace(/\D/g, "").slice(0, 7);
+      let nomeExistente = null;
+
+      if (siapeDuplicado) {
+        try {
+          const existente = await pool.query(
+            "SELECT nome FROM filiados WHERE siape = $1 LIMIT 1",
+            [siapeDuplicado]
+          );
+          nomeExistente = existente.rows?.[0]?.nome || null;
+        } catch (lookupErr) {
+          log.error("FiliadoLookupSiapeDuplicadoErro", {
+            requestId,
+            atorId,
+            siape: siapeDuplicado,
+            errorMessage: lookupErr.message
+          });
+        }
+      }
+
+      const mensagemDuplicidadeSiape = nomeExistente
+        ? `Matrícula (SIAPE) já cadastrada para ${nomeExistente}.`
+        : "Esta matrícula (SIAPE) já está cadastrada.";
+
+      return res.status(409).json({
+        success: false,
+        message: mensagemDuplicidadeSiape,
+        code: "SIAPE_DUPLICADO",
         requestId
       });
     }

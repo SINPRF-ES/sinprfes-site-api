@@ -170,7 +170,7 @@ describe('Filiados Controller', () => {
       }));
     });
 
-    test('should force cpf null for NAO_FILIADO even when cpf is provided', async () => {
+    test('should persist cpf for NAO_FILIADO when cpf is provided', async () => {
       req.user = { id: 1, perfil_acesso: 'DIRETORIA' };
       req.body = {
         nome: 'Sem CPF Obrigatório',
@@ -184,11 +184,37 @@ describe('Filiados Controller', () => {
       await controller.criarFiliado(req, res);
 
       expect(service.criarFiliadoInicial).toHaveBeenCalledWith(expect.objectContaining({
-        cpf: null,
+        cpf: '12345678900',
         situacao_sindical: 'NAO_FILIADO'
       }), 'DIRETORIA');
       expect(enviarEmailBoasVindasFiliado).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    test('should return 409 when siape already exists', async () => {
+      req.user = { id: 1, perfil_acesso: 'DIRETORIA' };
+      req.body = {
+        nome: 'Novo Filiado',
+        cpf: '123.456.789-00',
+        siape: '1234567',
+        email1: 'novo@email.com',
+        telefone1: '27999999999',
+        lotacao: 'SEDE',
+        situacao_sindical: 'FILIADO_SINPRF_ES'
+      };
+
+      pool.query
+        .mockResolvedValueOnce({ rows: [] }) // pre-check cpf
+        .mockResolvedValueOnce({ rows: [{ nome: 'Fulano Siape' }] }); // pre-check siape
+
+      await controller.criarFiliado(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: false,
+        message: 'Matrícula (SIAPE) já pertence ao filiado: Fulano Siape.'
+      }));
+      expect(service.criarFiliadoInicial).not.toHaveBeenCalled();
     });
   });
 

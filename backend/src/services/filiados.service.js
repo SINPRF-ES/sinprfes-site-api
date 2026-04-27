@@ -653,7 +653,11 @@ async function criarFiliadoInicial(dados, perfilCriador) {
     return await buscarPorId(rows[0].id);
   } catch (err) {
     if (err && err.code === "23505") {
-      err.code = "CPF_DUPLICADO";
+      if (err.constraint === "filiados_cpf_key") {
+        err.code = "CPF_DUPLICADO";
+      } else if (err.constraint === "filiados_siape_key") {
+        err.code = "SIAPE_DUPLICADO";
+      }
     }
     throw err;
   }
