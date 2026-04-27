@@ -2,9 +2,13 @@
 const controller = require('./filiados.controller');
 const service = require('../services/filiados.service');
 const Textos = require('../utils/textos');
+const pool = require('../config/db');
 
 jest.mock('../services/filiados.service');
 jest.mock('../utils/log');
+jest.mock('../config/db', () => ({
+  query: jest.fn()
+}));
 
 describe('Filiados Controller', () => {
   let req, res;
@@ -21,6 +25,7 @@ describe('Filiados Controller', () => {
       status: jest.fn().mockReturnThis()
     };
     jest.clearAllMocks();
+    pool.query.mockResolvedValue({ rows: [] });
   });
 
   describe('getMe', () => {
@@ -128,6 +133,34 @@ describe('Filiados Controller', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         message: 'UF do sindicato externo inválida.'
+      }));
+    });
+
+    test('should return duplicate cpf message with existing filiado name on race condition', async () => {
+      req.user = { id: 1, perfil_acesso: 'DIRETORIA' };
+      req.body = {
+        nome: 'Novo Filiado',
+        cpf: '123.456.789-00',
+        email1: 'novo@email.com',
+        situacao_sindical: 'NAO_FILIADO'
+      };
+
+      pool.query
+        .mockResolvedValueOnce({ rows: [] }) // pre-check cpf
+        .mockResolvedValueOnce({ rows: [{ nome: 'Fulano de Tal' }] }); // lookup in catch
+
+      service.criarFiliadoInicial.mockRejectedValue({
+        code: 'CPF_DUPLICADO',
+        message: 'duplicate key value violates unique constraint "filiados_cpf_key"'
+      });
+
+      await controller.criarFiliado(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: false,
+        message: 'CPF já cadastrado para Fulano de Tal.',
+        code: 'CPF_DUPLICADO'
       }));
     });
   });
