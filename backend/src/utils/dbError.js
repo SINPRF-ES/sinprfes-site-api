@@ -19,6 +19,15 @@ function handleDbError(err, res, requestId, defaultMessage = "Erro no banco de d
         requestId
     };
 
+    if (err?.code === "CPF_DUPLICADO") {
+        return res.status(409).json({
+            success: false,
+            message: "Este CPF já está cadastrado.",
+            code: err.code,
+            requestId
+        });
+    }
+
     // Padrão de erro de Schema ou Constraint Violations (23... ou 42703)
     if (err && (String(err.code).startsWith('23') || err.code === '42703')) {
         log.error("DatabaseConstraintErro", errorInfo);
@@ -27,7 +36,9 @@ function handleDbError(err, res, requestId, defaultMessage = "Erro no banco de d
         let safeMessage = "Não foi possível processar seus dados. Verifique se os campos obrigatórios estão preenchidos.";
 
         if (err.code === '23505') {
-            safeMessage = "Os dados informados já constam em nosso sistema (conflito de duplicidade).";
+            safeMessage = err.constraint === "filiados_cpf_key"
+              ? "Este CPF já está cadastrado."
+              : "Os dados informados já constam em nosso sistema (conflito de duplicidade).";
             return res.status(409).json({ success: false, message: safeMessage, code: err.code, requestId });
         }
 

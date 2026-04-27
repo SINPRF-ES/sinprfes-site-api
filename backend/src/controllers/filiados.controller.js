@@ -740,7 +740,7 @@ exports.criarFiliado = async (req, res) => {
       }
     }
 
-    if (body.cpf) {
+    if (ehFiliadoEfetivo && body.cpf) {
       const cpfLimpo = normalizarCpf(body.cpf);
       if (cpfLimpo.length !== 11) {
         return res.status(400).json({ success: false, message: "CPF inválido (deve ter 11 dígitos).", requestId });
@@ -767,7 +767,7 @@ exports.criarFiliado = async (req, res) => {
     const dadosNovo = {
       nome: String(body.nome).trim(),
       sexo: body.sexo ? normalizeSexo(body.sexo) : null,
-      cpf: body.cpf ? normalizarCpf(body.cpf) : null,
+      cpf: ehFiliadoEfetivo && body.cpf ? normalizarCpf(body.cpf) : null,
       siape: body.siape ? String(body.siape).replace(/\D/g, "").slice(0, 7) : null,
       data_nascimento: parseDateToISO(body.data_nascimento),
       telefone1: body.telefone1 ? normalizeTelefone(body.telefone1) : null,
@@ -806,6 +806,43 @@ exports.criarFiliado = async (req, res) => {
     if (err.isValidationError) {
       return res.status(400).json({ success: false, message: err.message, requestId });
     }
+
+    const isCpfDuplicadoError = err?.code === "CPF_DUPLICADO"
+      || (err?.code === "23505" && err?.constraint === "filiados_cpf_key");
+
+    if (isCpfDuplicadoError) {
+      const cpfDuplicado = normalizarCpf(req.body?.cpf || "");
+      let nomeExistente = null;
+
+      if (cpfDuplicado) {
+        try {
+          const existente = await pool.query(
+            "SELECT nome FROM filiados WHERE cpf = $1 LIMIT 1",
+            [cpfDuplicado]
+          );
+          nomeExistente = existente.rows?.[0]?.nome || null;
+        } catch (lookupErr) {
+          log.error("FiliadoLookupCpfDuplicadoErro", {
+            requestId,
+            atorId,
+            cpf: cpfDuplicado,
+            errorMessage: lookupErr.message
+          });
+        }
+      }
+
+      const mensagemDuplicidade = nomeExistente
+        ? `CPF já cadastrado para ${nomeExistente}.`
+        : "Este CPF já está cadastrado.";
+
+      return res.status(409).json({
+        success: false,
+        message: mensagemDuplicidade,
+        code: "CPF_DUPLICADO",
+        requestId
+      });
+    }
+
     return handleDbError(err, res, requestId, Textos.ERROS_INTERNOS.CRIAR_FILIADO);
   }
 };

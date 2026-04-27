@@ -2,9 +2,17 @@
 const controller = require('./filiados.controller');
 const service = require('../services/filiados.service');
 const Textos = require('../utils/textos');
+const pool = require('../config/db');
+const { enviarEmailBoasVindasFiliado } = require('../services/email.service');
 
 jest.mock('../services/filiados.service');
 jest.mock('../utils/log');
+jest.mock('../config/db', () => ({
+  query: jest.fn()
+}));
+jest.mock('../services/email.service', () => ({
+  enviarEmailBoasVindasFiliado: jest.fn().mockResolvedValue(undefined)
+}));
 
 describe('Filiados Controller', () => {
   let req, res;
@@ -21,6 +29,7 @@ describe('Filiados Controller', () => {
       status: jest.fn().mockReturnThis()
     };
     jest.clearAllMocks();
+    pool.query.mockResolvedValue({ rows: [] });
   });
 
   describe('getMe', () => {
@@ -129,6 +138,57 @@ describe('Filiados Controller', () => {
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         message: 'UF do sindicato externo inválida.'
       }));
+    });
+
+    test('should return duplicate cpf message with existing filiado name on race condition', async () => {
+      req.user = { id: 1, perfil_acesso: 'DIRETORIA' };
+      req.body = {
+        nome: 'Novo Filiado',
+        cpf: '123.456.789-00',
+        email1: 'novo@email.com',
+        telefone1: '27999999999',
+        lotacao: 'SEDE',
+        situacao_sindical: 'FILIADO_SINPRF_ES'
+      };
+
+      pool.query
+        .mockResolvedValueOnce({ rows: [] }) // pre-check cpf
+        .mockResolvedValueOnce({ rows: [{ nome: 'Fulano de Tal' }] }); // lookup in catch
+
+      service.criarFiliadoInicial.mockRejectedValue({
+        code: 'CPF_DUPLICADO',
+        message: 'duplicate key value violates unique constraint "filiados_cpf_key"'
+      });
+
+      await controller.criarFiliado(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: false,
+        message: 'CPF já cadastrado para Fulano de Tal.',
+        code: 'CPF_DUPLICADO'
+      }));
+    });
+
+    test('should force cpf null for NAO_FILIADO even when cpf is provided', async () => {
+      req.user = { id: 1, perfil_acesso: 'DIRETORIA' };
+      req.body = {
+        nome: 'Sem CPF Obrigatório',
+        cpf: '123.456.789-00',
+        email1: 'naofiliado@email.com',
+        telefone1: '27999999999',
+        situacao_sindical: 'NAO_FILIADO'
+      };
+      service.criarFiliadoInicial.mockResolvedValue({ id: 101, nome: 'Sem CPF Obrigatório' });
+
+      await controller.criarFiliado(req, res);
+
+      expect(service.criarFiliadoInicial).toHaveBeenCalledWith(expect.objectContaining({
+        cpf: null,
+        situacao_sindical: 'NAO_FILIADO'
+      }), 'DIRETORIA');
+      expect(enviarEmailBoasVindasFiliado).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(201);
     });
   });
 

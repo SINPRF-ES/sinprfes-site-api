@@ -529,7 +529,7 @@ async function listarParaPerfil(perfilAcesso, termoBusca = "", incluirArquivados
  */
 async function criarFiliadoInicial(dados, perfilCriador) {
   compactarDependentes(dados);
-  const cpfNormalizado = normalizarCpf(dados.cpf);
+  const cpfNormalizado = normalizarCpf(dados.cpf) || null;
 
   // Fallback: se bater constraint única por race-condition
   // (o controller já tenta evitar)
