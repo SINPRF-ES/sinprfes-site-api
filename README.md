@@ -16,6 +16,22 @@ A documentação completa do projeto foi organizada e centralizada no diretório
 - [**Paridade (Canon)**](./docs/PARITY_CANON.md): Regras oficiais de sincronização entre plataformas.
 - [**Matriz de Paridade**](./docs/parity-matrix.md): Status real de paridade App vs Site.
 - [**OTA Runbook Oficial**](./docs/runbooks/ota-update.md): Único guia oficial para atualizações Over-the-Air.
+- [**Guia de Migrations SQL**](./backend/scripts/migrations/README.md): Padrão de organização e execução das migrations.
+
+---
+
+
+## 🧾 Classificação sindical para cadastros e estatísticas
+
+Além da situação funcional (`ATIVO`, `VETERANO`, `PENSIONISTA`), o sistema opera com a dimensão cadastral `situacao_sindical`, usada em relatórios e painéis estatísticos.
+
+Valores canônicos:
+- `FILIADO_SINPRF_ES`
+- `FILIADO_OUTRO_SINDICATO`
+- `NAO_FILIADO`
+- `DESCONHECIDO`
+
+Com isso, o cadastro administrativo já contempla cenários de **não filiado** e **filiado em outro estado/sindicato** (via `uf_sindicato_externo`), preservando o backend como SSOT dos filtros e agregações.
 
 ---
 
@@ -209,39 +225,6 @@ Valores permitidos (Canonicos):
 - Situacao funcional responde: "Qual a condicao funcional do filiado?" (`ATIVO` / `VETERANO` / `PENSIONISTA`).
 
 ---
-
-## 📋 Estados e situacoes do usuario (sem ambiguidade)
-
-Cada usuario possui **dois eixos distintos**, que nao devem ser confundidos.
-
-### 1) Estado do cadastro (administrativo)
-
-Define se o registro esta operacionalmente ativo no sistema.
-
-- `CADASTRO_ATIVO`
-- `ARQUIVADO`
-
-Caracteristicas:
-- Controlado pela gestao.
-- Arquivamento:
-  - nao apaga dados
-  - preserva historico/auditoria
-  - e reversivel (desarquivar)
-
-### 2) Situacao funcional
-
-Define a condicao funcional do filiado perante a entidade.
-
-Valores permitidos:
-- `ATIVO`
-- `VETERANO`
-- `PENSIONISTA`
-
-**Importante:**
-- Estado do cadastro responde: "Este registro esta ativo no sistema?" (`CADASTRO_ATIVO` / `ARQUIVADO`).
-- Situacao funcional responde: "Qual a condicao funcional do filiado?" (`ATIVO` / `VETERANO` / `PENSIONISTA`).
-
-Mesmo que a palavra "ATIVO" exista na situacao funcional, ela **nao se confunde** com `CADASTRO_ATIVO`.
 
 ### 3) Auditoria de arquivamento
 
