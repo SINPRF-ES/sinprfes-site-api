@@ -8,7 +8,7 @@ jest.mock('./repasse.service');
 describe('reports.service - situacao_sindical metrics', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  test('calcula percentual total e base ajustada em SITUACAO ATIVO', async () => {
+  test('calcula filiação local/total e não filiação em SITUACAO ATIVO', async () => {
     pool.query
       .mockResolvedValueOnce({ rows: [{ total: 10, masc: 8, fem: 2 }] })
       .mockResolvedValueOnce({ rows: [{ filiado_sinprf_es: 40, filiado_outro_sindicato: 10, nao_filiado: 5, desconhecido: 2 }] })
@@ -20,6 +20,11 @@ describe('reports.service - situacao_sindical metrics', () => {
     const data = await reportsService.buscarDadosAgregados('SITUACAO', 'ATIVO');
 
     expect(data.situacaoSindical.efetivo_total_informado).toBe(100);
+    expect(data.situacaoSindical.filiados_totais).toBe(50);
+    expect(data.situacaoSindical.nao_filiados_estimados_no_efetivo).toBe(50);
+    expect(data.situacaoSindical.percentual_filiacao_local).toBe(40);
+    expect(data.situacaoSindical.percentual_filiacao_total).toBe(50);
+    expect(data.situacaoSindical.percentual_nao_filiacao).toBe(50);
     expect(data.situacaoSindical.base_local_ajustada).toBe(90);
     expect(data.situacaoSindical.percentual_total).toBe(40);
     expect(data.situacaoSindical.percentual_base_ajustada).toBeCloseTo(44.4, 1);

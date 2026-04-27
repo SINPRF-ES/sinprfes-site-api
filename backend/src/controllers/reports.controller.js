@@ -268,7 +268,11 @@ exports.previewReport = async (req, res) => {
             { label: "Filiado a outro sindicato", value: data.situacaoSindical.filiado_outro_sindicato },
             { label: "Não filiado", value: data.situacaoSindical.nao_filiado },
             { label: "Desconhecido / pendente", value: data.situacaoSindical.desconhecido },
-            { label: "% filiação (sobre efetivo total)", value: `${data.situacaoSindical.percentual_total}%` },
+            { label: "Filiados totais (qualquer sindicato)", value: data.situacaoSindical.filiados_totais },
+            { label: "Não filiados (estimado no efetivo)", value: data.situacaoSindical.nao_filiados_estimados_no_efetivo },
+            { label: "% filiação local (SINPRF/ES x efetivo)", value: `${data.situacaoSindical.percentual_filiacao_local}%` },
+            { label: "% filiação total (qualquer sindicato x efetivo)", value: `${data.situacaoSindical.percentual_filiacao_total}%` },
+            { label: "% não filiação (sobre efetivo total)", value: `${data.situacaoSindical.percentual_nao_filiacao}%` },
             { label: "Base local ajustada", value: data.situacaoSindical.base_local_ajustada },
             { label: "% filiação (base ajustada)", value: `${data.situacaoSindical.percentual_base_ajustada}%` }
           ]
