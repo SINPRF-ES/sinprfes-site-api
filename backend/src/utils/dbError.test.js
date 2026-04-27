@@ -41,4 +41,38 @@ describe("handleDbError", () => {
       requestId: "req-456"
     });
   });
+
+  test("retorna mensagem amigável para código customizado SIAPE_DUPLICADO", () => {
+    const res = createResponseMock();
+    const err = { code: "SIAPE_DUPLICADO", message: "duplicate key value violates unique constraint" };
+
+    handleDbError(err, res, "req-789", "Erro interno ao criar filiado.");
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: "Esta matrícula (SIAPE) já está cadastrada.",
+      code: "SIAPE_DUPLICADO",
+      requestId: "req-789"
+    });
+  });
+
+  test("retorna mensagem amigável quando violação 23505 for da constraint de SIAPE", () => {
+    const res = createResponseMock();
+    const err = {
+      code: "23505",
+      constraint: "filiados_siape_key",
+      message: "duplicate key value violates unique constraint \"filiados_siape_key\""
+    };
+
+    handleDbError(err, res, "req-000", "Erro interno ao criar filiado.");
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: "Esta matrícula (SIAPE) já está cadastrada.",
+      code: "23505",
+      requestId: "req-000"
+    });
+  });
 });
