@@ -740,7 +740,7 @@ exports.criarFiliado = async (req, res) => {
       }
     }
 
-    if (body.cpf) {
+    if (ehFiliadoEfetivo && body.cpf) {
       const cpfLimpo = normalizarCpf(body.cpf);
       if (cpfLimpo.length !== 11) {
         return res.status(400).json({ success: false, message: "CPF inválido (deve ter 11 dígitos).", requestId });
@@ -767,7 +767,7 @@ exports.criarFiliado = async (req, res) => {
     const dadosNovo = {
       nome: String(body.nome).trim(),
       sexo: body.sexo ? normalizeSexo(body.sexo) : null,
-      cpf: body.cpf ? normalizarCpf(body.cpf) : null,
+      cpf: ehFiliadoEfetivo && body.cpf ? normalizarCpf(body.cpf) : null,
       siape: body.siape ? String(body.siape).replace(/\D/g, "").slice(0, 7) : null,
       data_nascimento: parseDateToISO(body.data_nascimento),
       telefone1: body.telefone1 ? normalizeTelefone(body.telefone1) : null,
