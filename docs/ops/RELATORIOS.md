@@ -79,6 +79,21 @@ Para evitar poluição visual, o histórico no aplicativo segue o padrão do mó
 - Exibe apenas as 5 solicitações mais recentes.
 - Botão "Exibir anteriores" revela o restante do histórico disponível (dentro da janela de retenção de 30 dias).
 
+
+## Dimensão sindical nos indicadores
+
+Para análise administrativa, os relatórios e prévias consideram também a classificação `situacao_sindical` como eixo separado da situação funcional:
+
+- `FILIADO_SINPRF_ES`
+- `FILIADO_OUTRO_SINDICATO`
+- `NAO_FILIADO`
+- `DESCONHECIDO`
+
+Diretrizes:
+- O detalhamento estatístico pode incluir não filiados e filiados de outro sindicato para leitura gerencial.
+- Regras de acesso (login, assembleias, push coletivo) continuam restritas ao filiado efetivo (`FILIADO_SINPRF_ES`).
+- Quando houver recorte de base sindical local, usar as fórmulas canônicas do `PARITY_CANON.md`.
+
 ## Configuração (Environment Variables)
 
 - `REPORTS_COPY_EMAIL`: Endereço de e-mail do sindicato que receberá a cópia de todos os relatórios gerados (Padrão: `sinprfes@sinprfes.org.br`).

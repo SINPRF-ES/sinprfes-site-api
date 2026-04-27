@@ -38,8 +38,19 @@ node backend/scripts/import-nao-filiados.js ./nao-filiados.csv --dry-run
   - com CPF já existente: linha é ignorada;
   - com matrícula/SIAPE já existente: linha é ignorada;
   - sem CPF e sem matrícula: pode sinalizar possível duplicidade por nome (apenas aviso).
-- Todos os registros entram com `situacao_sindical = NAO_FILIADO`.
-- O fluxo já existente no backend mantém `NAO_FILIADO` sem login, fora de assembleias e fora de push coletivo.
+- Todos os registros entram com `situacao_sindical = NAO_FILIADO` (editável depois por gestão, quando aplicável).
+- O fluxo do backend mantém `NAO_FILIADO` e `FILIADO_OUTRO_SINDICATO` sem login, fora de assembleias e fora de push coletivo.
+- Para `FILIADO_OUTRO_SINDICATO`, a UF externa (`uf_sindicato_externo`) deve ser UF brasileira válida e diferente de `ES`.
+
+
+## Cadastro manual (sem importação)
+
+Além do script de importação, o cadastro também pode ser feito manualmente nas telas de gestão (site/app) com classificação sindical explícita:
+
+- `NAO_FILIADO`
+- `FILIADO_OUTRO_SINDICATO` (com `uf_sindicato_externo`)
+
+Isso permite incluir pessoas para fins de relatórios e estatísticas sem tratá-las como filiadas efetivas do SINPRF/ES.
 
 ## Exemplo de execução
 
