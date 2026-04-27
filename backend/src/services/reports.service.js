@@ -9,13 +9,27 @@ function roundPercent(value) {
 }
 
 function calcularPercentuaisSindicais({ efetivoTotal, filiadoSinprf, filiadoOutro }) {
-  const percentual_total = efetivoTotal > 0 ? roundPercent((filiadoSinprf / efetivoTotal) * 100) : 0;
+  const filiadosTotais = filiadoSinprf + filiadoOutro;
+  const naoFiliados = Math.max(efetivoTotal - filiadosTotais, 0);
+  const percentual_filiacao_local = efetivoTotal > 0 ? roundPercent((filiadoSinprf / efetivoTotal) * 100) : 0;
+  const percentual_filiacao_total = efetivoTotal > 0 ? roundPercent((filiadosTotais / efetivoTotal) * 100) : 0;
+  const percentual_nao_filiacao = efetivoTotal > 0 ? roundPercent((naoFiliados / efetivoTotal) * 100) : 0;
   const base_local_ajustada = efetivoTotal - filiadoOutro;
   const percentual_base_ajustada = base_local_ajustada > 0
     ? roundPercent((filiadoSinprf / base_local_ajustada) * 100)
     : 0;
 
-  return { percentual_total, base_local_ajustada, percentual_base_ajustada };
+  return {
+    filiados_totais: filiadosTotais,
+    nao_filiados_estimados_no_efetivo: naoFiliados,
+    percentual_filiacao_local,
+    percentual_filiacao_total,
+    percentual_nao_filiacao,
+    // Compatibilidade retroativa
+    percentual_total: percentual_filiacao_local,
+    base_local_ajustada,
+    percentual_base_ajustada
+  };
 }
 
 /**
