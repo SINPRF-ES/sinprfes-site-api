@@ -12,6 +12,9 @@ exports.listar = async (req, res) => {
 
   try {
     const folderId = req.query.folderId;
+    const proto = req.get("x-forwarded-proto") || req.protocol || "https";
+    const host = req.get("host") || "";
+    const apiBaseUrl = host ? `${proto}://${host}` : "";
 
     // Busca os arquivos (passando o ID se houver)
     const arquivos = await listarArquivosPublicos(folderId);
