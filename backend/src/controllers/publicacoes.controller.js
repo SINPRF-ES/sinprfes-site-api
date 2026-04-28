@@ -39,7 +39,7 @@ exports.listar = async (req, res) => {
         }
 
         const isApk = mimeType === "application/vnd.android.package-archive" || /\.apk$/i.test(nomeOriginal);
-        const proxyUrl = apiBaseUrl ? `${apiBaseUrl}/api/publicacoes/arquivo/${id}?download=1` : `/api/publicacoes/arquivo/${id}?download=1`;
+        const proxyUrl = `/api/publicacoes/arquivo/${id}?download=1`;
 
         return {
           id,
@@ -47,8 +47,11 @@ exports.listar = async (req, res) => {
           tipo,
           isFolder,
           descricao: isFolder ? "Pasta de documentos" : "Documento oficial.",
-          arquivo_url: isApk ? (webContentLink || proxyUrl) : webViewLink,
+          // Para APK, sempre priorizamos o proxy do backend para evitar links de visualização do Drive
+          // e padronizar cabeçalhos de download/instalação no Android.
+          arquivo_url: isApk ? proxyUrl : webViewLink,
           download_url: proxyUrl,
+          external_url: webContentLink || webViewLink || null,
           isApk,
           data_publicacao: createdTime,
           name: nomeOriginal,
@@ -98,17 +101,22 @@ exports.visualizar = async (req, res) => {
 
     const isApk = dados.mimeType === "application/vnd.android.package-archive" || /\.apk$/i.test(dados.name || "");
     const shouldDownload = req.query.download === "1" || req.query.download === "true" || isApk;
+    const normalizedMimeType = isApk ? "application/vnd.android.package-archive" : (dados.mimeType || "application/octet-stream");
 
     // Configura o cabeçalho para exibir (inline) ou baixar (attachment)
-    res.setHeader("Content-Type", dados.mimeType);
+    res.setHeader("Content-Type", normalizedMimeType);
     res.setHeader("Content-Disposition", `${shouldDownload ? "attachment" : "inline"}; filename="${dados.name}"`);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    if (dados.size) {
+      res.setHeader("Content-Length", String(dados.size));
+    }
 
     log.info("PublicacoesVisualizarSucesso", {
       requestId,
       atorId,
       fileId,
       fileName: dados.name,
-      mimeType: dados.mimeType,
+      mimeType: normalizedMimeType,
       shouldDownload,
       isApk,
     });
