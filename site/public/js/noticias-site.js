@@ -237,18 +237,18 @@ async function renderNoticiasResumo(API_BASE, mountEl) {
 
     mountEl.innerHTML = `
       <section class="ui-card news-summary-card">
-        <header class="instagram-news-header instagram-news-header--centered">
-          <h2 class="section-title"><span class="emoji">📰</span><span>Destaques públicos</span></h2>
-        </header>
-        ${latestNewsHtml}
         <div class="ui-card instagram-news-shell">
           <header class="instagram-news-header instagram-news-header--centered">
-            <h2 class="section-title"><span class="emoji">📸</span><span>Instagram oficial (5 últimos)</span></h2>
+            <h2 class="section-title"><span class="emoji">📸</span><span>Instagram oficial</span></h2>
           </header>
           <div class="instagram-news-grid">
             ${instagramTop5.map((post) => buildInstagramCard(post)).join('')}
           </div>
         </div>
+        <header class="instagram-news-header instagram-news-header--centered">
+          <h2 class="section-title"><span class="emoji">📰</span><span>Destaques</span></h2>
+        </header>
+        ${latestNewsHtml}
         <div class="news-summary-toolbar" style="margin-top:16px;">
           <input id="archive-search" type="search" placeholder="Buscar no histórico (título/conteúdo)..." />
           <select id="archive-source" aria-label="Filtrar histórico">
