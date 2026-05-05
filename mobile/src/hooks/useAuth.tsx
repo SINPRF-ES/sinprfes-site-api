@@ -41,6 +41,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const backgroundTimestamp = useRef<number | null>(null);
   const lastBiometricRequestAt = useRef<number>(0);
   const isBiometricRequestPending = useRef<boolean>(false);
+  const biometricRequestedInCurrentUnlockCycle = useRef<boolean>(false);
+
+  function devBiometricLog(event: string, payload?: Record<string, unknown>) {
+    if (!__DEV__) return;
+    if (payload) {
+      console.log(`[Biometria.dev] ${event}`, payload);
+      return;
+    }
+    console.log(`[Biometria.dev] ${event}`);
+  }
+
+  function resetBiometricUnlockCycle(reason: string) {
+    biometricRequestedInCurrentUnlockCycle.current = false;
+    devBiometricLog('cycle.reset', { reason });
+  }
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
@@ -52,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (backgroundTimestamp.current && Date.now() - backgroundTimestamp.current > 60000) {
           if (token) {
             setBloqueadoPorBiometria(true);
+            resetBiometricUnlockCycle('app_foreground_after_timeout');
           }
         }
         backgroundTimestamp.current = null;
@@ -162,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(novoToken);
     setUsuario(novoUsuario);
     setBloqueadoPorBiometria(false);
+    resetBiometricUnlockCycle('session_set');
     await salvarSessao({ token: novoToken, usuario: novoUsuario, refreshToken: novoRefreshToken });
     await salvarLastStrongAuthAt();
   }
@@ -185,6 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setBloqueadoPorBiometria(false);
+    resetBiometricUnlockCycle('logout');
 
     // Limpeza adicional de caches específicos de telas
     try {
@@ -206,27 +224,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (ativar && token) setBloqueadoPorBiometria(true);
   }
 
-  async function desbloquearComBiometria(): Promise<boolean> {
+  async function requestBiometricUnlockOnce(source = 'unknown'): Promise<boolean> {
+    devBiometricLog('request.received', { source });
+
+    if (biometricRequestedInCurrentUnlockCycle.current) {
+      devBiometricLog('request.blocked.already_requested_in_cycle', { source });
+      return false;
+    }
+
     if (isBiometricRequestPending.current || isSecureStorePromptPending()) {
-      console.log('[Biometria.guard] Ignorando pedido: já existe uma solicitação pendente');
+      devBiometricLog('request.blocked.pending_prompt', { source });
       return false;
     }
 
     const now = Date.now();
     const isCooldownActive = isBiometricPromptCooldownActive();
     if (isCooldownActive || (now - lastBiometricRequestAt.current < 5000)) {
-      console.log('[Biometria.guard] Ignorando pedido: intervalo muito curto (cooldown ativo)');
+      devBiometricLog('request.blocked.cooldown', { source, isCooldownActive });
       return false;
     }
 
     isBiometricRequestPending.current = true;
+    biometricRequestedInCurrentUnlockCycle.current = true;
     try {
-      console.log('[Biometria.auth.start]');
+      devBiometricLog('auth.start', { source });
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const enrolled = await LocalAuthentication.isEnrolledAsync();
 
       if (!hasHardware || !enrolled) {
-        console.warn('[Biometria.auth.skip] Hardware ou Digital não disponíveis');
+        devBiometricLog('auth.skip.no_hardware_or_enrollment', { source });
         setBloqueadoPorBiometria(false);
         return true;
       }
@@ -241,18 +267,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       lastBiometricRequestAt.current = Date.now();
 
       if (res.success) {
-        console.log('[Biometria.auth.ok]');
+        devBiometricLog('auth.success', { source });
         setBloqueadoPorBiometria(false);
+        resetBiometricUnlockCycle('biometric_success');
         return true;
       }
-      console.log('[Biometria.auth.fail]', res.error);
+      devBiometricLog('auth.fail', { source, error: res.error });
       return false;
     } catch (e) {
       console.error('[Biometria.auth.error]', e);
       return false;
     } finally {
       isBiometricRequestPending.current = false;
+      devBiometricLog('auth.finally.cleanup', { source });
     }
+  }
+
+  async function desbloquearComBiometria(): Promise<boolean> {
+    return requestBiometricUnlockOnce('generic');
   }
 
   const value = useMemo<AuthContextData>(() => ({
