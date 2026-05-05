@@ -12,3 +12,6 @@ build
 .github
 .jules
 .Jules
+credentials.json
+*.service-account.json
+.env.*

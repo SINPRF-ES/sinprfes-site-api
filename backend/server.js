@@ -3,6 +3,7 @@ const { logDbSafeInfo } = require("./src/utils/dbLog");
 const app = require("./src/app");
 const http = require("http");
 const assembleiaSocket = require("./src/websocket/assembleia.socket");
+const { validateGoogleCredentialsForBoot } = require("./src/services/drive.service");
 
 logDbSafeInfo("DATABASE"); // imprime apenas host/port/dbname
 
@@ -14,6 +15,17 @@ const { initPushCleanupScheduler } = require("./src/jobs/pushCleanupScheduler");
 const { initReportCleanupScheduler } = require("./src/jobs/reportCleanupScheduler");
 const { initInstagramTokenRefreshScheduler } = require("./src/jobs/instagramTokenRefreshScheduler");
 const { initCloudflareEdgeSyncScheduler } = require("./src/jobs/cloudflareEdgeSyncScheduler");
+
+const googleDriveRequired =
+  process.env.GOOGLE_DRIVE_REQUIRED === "true" ||
+  Boolean(process.env.GOOGLE_DRIVE_FOLDER_ID);
+
+try {
+  validateGoogleCredentialsForBoot(googleDriveRequired);
+} catch (error) {
+  console.error("[BOOT] Google credentials configuration error:", error.message);
+  process.exit(1);
+}
 
 // Porta (obrigatório usar process.env.PORT em ambientes cloud)
 const PORT = process.env.PORT || 3000;

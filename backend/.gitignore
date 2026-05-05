@@ -6,3 +6,6 @@ frontend
 tmp
 google.json
 *.log
+credentials.json
+*.service-account.json
+.env.*

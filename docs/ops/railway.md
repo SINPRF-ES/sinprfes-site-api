@@ -62,3 +62,38 @@ Falhas classificadas:
 - `CONSULTA_PROCESSUAL_DEBUG`
 
 Com `CONSULTA_PROCESSUAL_DEBUG=true`, o backend loga também o `executablePath` do Chromium para diagnóstico.
+
+## 5. Credencial Google Service Account (Railway/Render)
+
+Nunca commitar JSON de service account no repositório (`google.json`, `credentials.json`, etc.).
+
+O backend lê credencial nesta ordem:
+
+1. `GOOGLE_SERVICE_ACCOUNT_JSON_BASE64` (**preferencial**)
+2. `GOOGLE_SERVICE_ACCOUNT_JSON` (compatibilidade)
+
+Se `GOOGLE_DRIVE_REQUIRED=true` ou `GOOGLE_DRIVE_FOLDER_ID` estiver definido, o boot valida essas variáveis e encerra com erro explícito se estiverem ausentes/inválidas.
+
+### Como configurar no Railway
+
+1. No Google Cloud, obtenha o JSON da service account.
+2. Converta para base64 (uma linha):
+   ```bash
+   base64 -w 0 service-account.json
+   ```
+   > Em macOS use: `base64 service-account.json | tr -d '\n'`
+3. No serviço da API, em **Variables**, defina:
+   - `GOOGLE_SERVICE_ACCOUNT_JSON_BASE64=<valor_base64>`
+   - `GOOGLE_DRIVE_FOLDER_ID=<id_da_pasta>` (quando aplicável)
+   - opcional: `GOOGLE_DRIVE_REQUIRED=true`
+
+### Como configurar no Render
+
+1. Abra o serviço Web da API.
+2. Em **Environment**, adicione:
+   - `GOOGLE_SERVICE_ACCOUNT_JSON_BASE64`
+   - `GOOGLE_DRIVE_FOLDER_ID` (quando aplicável)
+   - opcional: `GOOGLE_DRIVE_REQUIRED=true`
+3. Faça deploy/restart para aplicar.
+
+> Segurança: não imprimir, não versionar e não compartilhar valores das variáveis com secrets.
