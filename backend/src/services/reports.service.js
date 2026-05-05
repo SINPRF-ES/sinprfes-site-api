@@ -110,15 +110,15 @@ async function buscarDadosAgregados(tipo, valor) {
     ${whereClause}
   `;
 
-  const filiadosResult = await pool.query(query, params);
-  const result = filiadosResult.rows[0];
+  // BOLT: Hierarchical parallelization of all independent database queries.
+  const tasks = [pool.query(query, params).then((res) => res.rows[0])];
 
-  // Adiciona dados do Repasse se for relatório por Lotação (sempre automático, sem override manual)
   if (tipo === "LOTACAO") {
-    const repasseData = await repasseService.getUltimosDadosParaRelatorio(valor);
-    result.repasse = repasseData;
-
-    const { rows } = await pool.query(`
+    tasks.push(repasseService.getUltimosDadosParaRelatorio(valor));
+    tasks.push(
+      pool
+        .query(
+          `
       SELECT
         COUNT(*) FILTER (WHERE situacao_sindical = $2)::INTEGER AS filiado_sinprf_es,
         COUNT(*) FILTER (WHERE situacao_sindical = $3)::INTEGER AS filiado_outro_sindicato,
@@ -128,34 +128,22 @@ async function buscarDadosAgregados(tipo, valor) {
       WHERE arquivado_em IS NULL
         AND situacao = 'ATIVO'
         AND UPPER(lotacao) LIKE $1
-    `, [
-      `%${lotacaoKeyword}%`,
-      SITUACAO_SINDICAL.FILIADO_SINPRF_ES,
-      SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO,
-      SITUACAO_SINDICAL.NAO_FILIADO,
-      SITUACAO_SINDICAL.DESCONHECIDO
-    ]);
-
-    const sindical = rows[0] || {};
-    const efetivoTotal = Number(repasseData?.prfTotal || 0);
-    const filiadoSinprf = Number(sindical.filiado_sinprf_es || 0);
-    const filiadoOutro = Number(sindical.filiado_outro_sindicato || 0);
-    const percentuais = calcularPercentuaisSindicais({ efetivoTotal, filiadoSinprf, filiadoOutro });
-
-    result.situacaoSindicalLotacao = {
-      efetivo_total_informado: efetivoTotal,
-      filiado_sinprf_es: filiadoSinprf,
-      filiado_outro_sindicato: filiadoOutro,
-      nao_filiado: Number(sindical.nao_filiado || 0),
-      desconhecido: Number(sindical.desconhecido || 0),
-      ...percentuais
-    };
-  }
-
-  // Especial: Situação ATIVO usa efetivo automático do cadastro estadual (sem tabela manual)
-  if (tipo === "SITUACAO" && valor === "ATIVO") {
-    const [sindicalCountsResult, efetivoTotalCadastroResult] = await Promise.all([
-      pool.query(`
+    `,
+          [
+            `%${lotacaoKeyword}%`,
+            SITUACAO_SINDICAL.FILIADO_SINPRF_ES,
+            SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO,
+            SITUACAO_SINDICAL.NAO_FILIADO,
+            SITUACAO_SINDICAL.DESCONHECIDO,
+          ]
+        )
+        .then((res) => res.rows[0])
+    );
+  } else if (tipo === "SITUACAO" && valor === "ATIVO") {
+    tasks.push(
+      pool
+        .query(
+          `
         SELECT
           COUNT(*) FILTER (WHERE situacao_sindical = $1)::INTEGER AS filiado_sinprf_es,
           COUNT(*) FILTER (WHERE situacao_sindical = $2)::INTEGER AS filiado_outro_sindicato,
@@ -163,31 +151,67 @@ async function buscarDadosAgregados(tipo, valor) {
           COUNT(*) FILTER (WHERE situacao_sindical = $4)::INTEGER AS desconhecido
         FROM filiados
         WHERE arquivado_em IS NULL
-      `, [
-        SITUACAO_SINDICAL.FILIADO_SINPRF_ES,
-        SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO,
-        SITUACAO_SINDICAL.NAO_FILIADO,
-        SITUACAO_SINDICAL.DESCONHECIDO
-      ]),
-      pool.query(`
+      `,
+          [
+            SITUACAO_SINDICAL.FILIADO_SINPRF_ES,
+            SITUACAO_SINDICAL.FILIADO_OUTRO_SINDICATO,
+            SITUACAO_SINDICAL.NAO_FILIADO,
+            SITUACAO_SINDICAL.DESCONHECIDO,
+          ]
+        )
+        .then((res) => res.rows[0])
+    );
+    tasks.push(
+      pool
+        .query(
+          `
         SELECT COUNT(*)::INTEGER AS efetivo_total
         FROM filiados
         WHERE arquivado_em IS NULL
           AND situacao = 'ATIVO'
-      `)
-    ]);
+      `
+        )
+        .then((res) => res.rows[0])
+    );
+    tasks.push(
+      Promise.all(
+        LOTACOES_REPASSE.map(async (lot) => {
+          const repData = await repasseService.getUltimosDadosParaRelatorio(lot);
+          return { lotacao: lot, ...repData };
+        })
+      )
+    );
+  }
 
-    const sindical = sindicalCountsResult.rows[0] || {};
-    const efetivoTotal = Number(efetivoTotalCadastroResult.rows[0]?.efetivo_total || 0);
+  const taskResults = await Promise.all(tasks);
+  const result = taskResults[0];
+
+  if (tipo === "LOTACAO") {
+    const repasseData = taskResults[1];
+    const sindical = taskResults[2] || {};
+    const efetivoTotal = Number(repasseData?.prfTotal || 0);
     const filiadoSinprf = Number(sindical.filiado_sinprf_es || 0);
     const filiadoOutro = Number(sindical.filiado_outro_sindicato || 0);
     const percentuais = calcularPercentuaisSindicais({ efetivoTotal, filiadoSinprf, filiadoOutro });
 
-    // BOLT: Parallelize repasse data fetching for all lotações (automático).
-    const breakdown = await Promise.all(LOTACOES_REPASSE.map(async (lot) => {
-      const repData = await repasseService.getUltimosDadosParaRelatorio(lot);
-      return { lotacao: lot, ...repData };
-    }));
+    result.repasse = repasseData;
+    result.situacaoSindicalLotacao = {
+      efetivo_total_informado: efetivoTotal,
+      filiado_sinprf_es: filiadoSinprf,
+      filiado_outro_sindicato: filiadoOutro,
+      nao_filiado: Number(sindical.nao_filiado || 0),
+      desconhecido: Number(sindical.desconhecido || 0),
+      ...percentuais,
+    };
+  } else if (tipo === "SITUACAO" && valor === "ATIVO") {
+    const sindical = taskResults[1] || {};
+    const efetivoTotal = Number(taskResults[2]?.efetivo_total || 0);
+    const breakdown = taskResults[3];
+
+    const filiadoSinprf = Number(sindical.filiado_sinprf_es || 0);
+    const filiadoOutro = Number(sindical.filiado_outro_sindicato || 0);
+    const percentuais = calcularPercentuaisSindicais({ efetivoTotal, filiadoSinprf, filiadoOutro });
+
     result.repasseBreakdown = breakdown;
     result.situacaoSindical = {
       efetivo_total_informado: efetivoTotal,
@@ -195,7 +219,7 @@ async function buscarDadosAgregados(tipo, valor) {
       filiado_outro_sindicato: filiadoOutro,
       nao_filiado: Number(sindical.nao_filiado || 0),
       desconhecido: Number(sindical.desconhecido || 0),
-      ...percentuais
+      ...percentuais,
     };
   }
 
