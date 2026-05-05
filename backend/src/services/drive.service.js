@@ -1,12 +1,7 @@
 // src/services/drive.service.js
 const { google } = require("googleapis");
-const path = require("path");
-const fs = require("fs");
 const streamifier = require("streamifier");
 const log = require("../utils/log");
-
-// Fallback local (apenas dev). NÃO comitar google.json.
-const KEY_PATH = path.join(__dirname, "../../google.json");
 
 // Scopes: readonly para listar/baixar + drive.file para upload (caso você use upload)
 const SCOPES = [
@@ -30,39 +25,58 @@ function safeGoogleErrorDetails(error) {
 }
 
 /**
- * Obtém a instância de autenticação do Google.
- * Prioriza a variável de ambiente GOOGLE_APPLICATION_CREDENTIALS_JSON (produção/Cloud).
- * Fallback para o arquivo google.json (local/desenvolvimento), se existir.
- *
- * Importante: se nenhuma credencial for encontrada, NÃO usa ADC (default credentials).
- * Em vez disso, lança erro explícito (evita "Could not load the default credentials").
+ * Resolve credenciais de service account via variáveis de ambiente.
+ * Ordem de prioridade:
+ * 1) GOOGLE_SERVICE_ACCOUNT_JSON_BASE64 (preferencial)
+ * 2) GOOGLE_SERVICE_ACCOUNT_JSON (compatibilidade)
  */
-function getGoogleAuth() {
-  const authOptions = { scopes: SCOPES };
+function parseGoogleServiceAccountCredentials() {
+  const base64Value = process.env.GOOGLE_SERVICE_ACCOUNT_JSON_BASE64;
+  const plainJsonValue = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 
-  const rawJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-
-  if (rawJson && rawJson.trim()) {
+  if (base64Value && base64Value.trim()) {
     try {
-      // A env var deve conter o JSON completo do service account (string).
-      // O campo private_key precisa estar com \n (como no arquivo original do Google).
-      authOptions.credentials = JSON.parse(rawJson);
-      return new google.auth.GoogleAuth(authOptions);
-    } catch (e) {
-      log.error("GoogleDriveAuthJsonParseError", { error: e.message });
-      // Cai para fallback local abaixo (se existir); caso contrário, erro explícito.
+      const decoded = Buffer.from(base64Value, "base64").toString("utf8");
+      return JSON.parse(decoded);
+    } catch (error) {
+      throw new Error(
+        "Invalid GOOGLE_SERVICE_ACCOUNT_JSON_BASE64: expected a valid base64-encoded service account JSON."
+      );
     }
   }
 
-  if (fs.existsSync(KEY_PATH)) {
-    authOptions.keyFile = KEY_PATH;
-    return new google.auth.GoogleAuth(authOptions);
+  if (plainJsonValue && plainJsonValue.trim()) {
+    try {
+      return JSON.parse(plainJsonValue);
+    } catch (error) {
+      throw new Error(
+        "Invalid GOOGLE_SERVICE_ACCOUNT_JSON: expected a valid service account JSON string."
+      );
+    }
   }
 
-  // Não permitir ADC em ambientes Cloud (isso gera erros de permissão).
-  throw new Error(
-    "Google credentials not configured. Set GOOGLE_APPLICATION_CREDENTIALS_JSON (recommended for Cloud) or provide a local google.json (gitignored)."
-  );
+  return null;
+}
+
+function getGoogleAuth() {
+  const credentials = parseGoogleServiceAccountCredentials();
+
+  if (!credentials) {
+    throw new Error(
+      "Google credentials not configured. Set GOOGLE_SERVICE_ACCOUNT_JSON_BASE64 (preferred) or GOOGLE_SERVICE_ACCOUNT_JSON."
+    );
+  }
+
+  return new google.auth.GoogleAuth({
+    scopes: SCOPES,
+    credentials,
+  });
+}
+
+function validateGoogleCredentialsForBoot(required = false) {
+  if (!required) return;
+
+  parseGoogleServiceAccountCredentials();
 }
 
 // 🟢 Aceita um ID opcional. Se não vier, usa o padrão do .env
@@ -187,4 +201,5 @@ module.exports = {
   obterArquivoStream,
   obterArquivoTexto,
   uploadFile,
+  validateGoogleCredentialsForBoot,
 };

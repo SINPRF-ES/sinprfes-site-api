@@ -12,3 +12,6 @@ mobile/build-*.apk
 backend/package-lock.json
 backend/yarn.lock
 backend/npm-shrinkwrap.json
+credentials.json
+*.service-account.json
+.env.*
