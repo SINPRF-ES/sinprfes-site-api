@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, Image, Pressable, Platform } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useNavigation } from '@react-navigation/native';
@@ -26,6 +26,7 @@ export default function LoginScreen() {
   const [etapa, setEtapa] = useState<'credenciais' | '2fa'>('credenciais');
   const [loading, setLoading] = useState<boolean>(false);
   const [temCredencial, setTemCredencial] = useState<boolean>(false);
+  const autoBiometricAttemptedRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -38,12 +39,13 @@ export default function LoginScreen() {
   // Tenta autenticar com biometria ao carregar a tela
   useEffect(() => {
     (async () => {
-      if (biometriaHabilitada) {
+      if (biometriaHabilitada && temCredencial && !autoBiometricAttemptedRef.current) {
+        autoBiometricAttemptedRef.current = true;
         // Um pequeno delay para dar tempo da UI renderizar e o usuário ver o prompt
         setTimeout(handleBiometricLogin, 500);
       }
     })();
-  }, [biometriaHabilitada]);
+  }, [biometriaHabilitada, temCredencial]);
 
   async function handleBiometricLogin() {
     try {
@@ -119,6 +121,7 @@ export default function LoginScreen() {
     }
 
     try {
+      autoBiometricAttemptedRef.current = true;
       setLoading(true);
       const resultado = await loginSindicato({ cpf, senha });
 
