@@ -37,3 +37,8 @@
 **Pattern:** Business rules for profile-based access (e.g., "ehPerfilGestao") must be centralized in a shared module (Canon) to prevent drift between Backend and Site.
 **Implementation:** Use `Canon.ehPerfilGestao(perfil)` for coarse-grained checks and the `permissions` array for fine-grained UI/API gating.
 **Benefit:** Ensures that adding a new administrative role only requires updating one file to maintain system-wide consistency.
+
+## 2026-06-05 - [Rate Limiting for Resource-Intensive Queries]
+**Vulnerability:** Resource-intensive endpoints (like Google Drive listings in `/api/publicacoes`) were unprotected by rate limiters, making them targets for DoS or API quota exhaustion.
+**Learning:** Rate limiting should not be reserved only for "commands" (POST/PUT/DELETE). Queries that proxy external APIs or perform heavy processing should also be protected.
+**Prevention:** Use `stateLimiter` (or similar) for GET routes that involve external service calls or high resource usage.
