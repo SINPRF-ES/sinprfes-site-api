@@ -6,7 +6,7 @@
     "noEmit": true,
     "isolatedModules": true,
     "moduleResolution": "bundler",
-    "types": ["react", "react-native"]
+    "types": ["react", "react-native", "jest"]
   },
   "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"]
