@@ -76,17 +76,28 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!valor) return;
 
             const ano = parseInt(valor.split("-")[0]);
+            const msgContainer = document.getElementById("msg-container");
             
             // Regra: Ano deve ser > 1900
             if (ano < 1900) {
-                alert("Ano inválido. Por favor, verifique a data.");
+                if (window.Utils && window.Utils.exibirMensagem) {
+                    window.Utils.exibirMensagem(msgContainer, "Ano inválido. Por favor, verifique a data.", "danger");
+                    window.scrollTo({ top: msgContainer.offsetTop - 100, behavior: 'smooth' });
+                } else {
+                    alert("Ano inválido. Por favor, verifique a data.");
+                }
                 e.target.value = "";
                 return;
             }
 
             // Regra: Se for campo de nascimento, não pode ser no futuro
             if (input.id.includes("nascimento") && valor > hoje) {
-                alert("A data de nascimento não pode ser no futuro.");
+                if (window.Utils && window.Utils.exibirMensagem) {
+                    window.Utils.exibirMensagem(msgContainer, "A data de nascimento não pode ser no futuro.", "danger");
+                    window.scrollTo({ top: msgContainer.offsetTop - 100, behavior: 'smooth' });
+                } else {
+                    alert("A data de nascimento não pode ser no futuro.");
+                }
                 e.target.value = "";
             }
         });
@@ -98,10 +109,21 @@ document.addEventListener("DOMContentLoaded", () => {
     
     const buscarCep = async () => {
         const cep = inputCep.value.replace(/\D/g, "");
-        if(cep.length !== 8) return alert("Digite um CEP válido com 8 números.");
+        const cepError = document.getElementById("cep-error");
+        if (cepError) cepError.style.display = "none";
+
+        if(cep.length !== 8) {
+            if (cepError) {
+                cepError.textContent = "Digite um CEP válido com 8 números.";
+                cepError.style.display = "block";
+            } else {
+                alert("Digite um CEP válido com 8 números.");
+            }
+            return;
+        }
         
         const originalText = btnCep.innerText;
-        btnCep.innerText = "⏳";
+        btnCep.innerHTML = '<span class="ui-spinner"></span>';
         btnCep.disabled = true;
 
         try {
@@ -114,11 +136,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("uf").value = d.uf;
                 document.getElementById("numero").focus();
             } else {
-                alert("CEP não encontrado.");
+                if (cepError) {
+                    cepError.textContent = "CEP não encontrado.";
+                    cepError.style.display = "block";
+                } else {
+                    alert("CEP não encontrado.");
+                }
             }
         } catch(e) {
             console.error(e);
-            alert("Erro ao buscar CEP.");
+            if (cepError) {
+                cepError.textContent = "Erro ao buscar CEP.";
+                cepError.style.display = "block";
+            } else {
+                alert("Erro ao buscar CEP.");
+            }
         } finally {
             btnCep.innerText = originalText;
             btnCep.disabled = false;
@@ -142,7 +174,8 @@ document.addEventListener("DOMContentLoaded", () => {
             
             const originalText = btnSubmit.innerText;
             btnSubmit.disabled = true;
-            btnSubmit.innerText = "ENVIANDO...";
+            btnSubmit.innerHTML = '<span class="ui-spinner"></span> ENVIANDO...';
+            btnSubmit.setAttribute("aria-busy", "true");
             msgContainer.style.display = "none";
             msgContainer.className = "status-msg";
 
@@ -191,6 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 msgContainer.style.display = "block";
                 btnSubmit.disabled = false;
                 btnSubmit.innerText = originalText;
+                btnSubmit.removeAttribute("aria-busy");
             }
         });
     }

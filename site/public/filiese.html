@@ -262,7 +262,7 @@
           </div>
           <div class="form-group">
             <label for="siape">Matrícula SIAPE *</label>
-            <input type="text" id="siape" name="siape" required>
+            <input type="text" id="siape" name="siape" inputmode="numeric" required>
           </div>
           <div class="form-group">
             <label for="data_nascimento">Data de Nascimento *</label>
@@ -304,8 +304,9 @@
             <label for="cep">CEP *</label>
             <div style="display:flex;">
               <input type="text" id="cep" name="cep" placeholder="00000-000" maxlength="9" inputmode="numeric" autocomplete="postal-code" required style="border-radius: 4px 0 0 4px; border-right: none;">
-              <button type="button" id="btn-buscar-cep" class="btn-outline">BUSCAR</button>
+              <button type="button" id="btn-buscar-cep" class="btn-outline" aria-label="Buscar endereço pelo CEP">🔍 BUSCAR</button>
             </div>
+            <span id="cep-error" class="ui-text-danger" style="display:none; font-size: 0.8rem; margin-top: 4px;"></span>
           </div>
           <div class="form-group" style="grid-column: span 2;">
             <label for="logradouro">Logradouro *</label>
@@ -353,7 +354,7 @@
           <span>Autorizo o tratamento dos meus dados pessoais para fins sindicais, conforme a Lei Geral de Proteção de Dados (LGPD).</span>
         </label>
 
-        <div id="msg-container" class="status-msg"></div>
+        <div id="msg-container" class="status-msg" aria-live="polite"></div>
 
         <div style="margin-top: 30px;">
           <button type="submit" id="btn-submit" class="btn-primary">GERAR FICHA DE FILIAÇÃO</button>
