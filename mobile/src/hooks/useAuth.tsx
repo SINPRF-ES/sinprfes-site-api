@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Define callback global para apiService (Logout Unificado)
-    (global as any).onSessionExpired = () => {
+    (globalThis as typeof globalThis & { onSessionExpired?: () => void }).onSessionExpired = () => {
        console.warn('[Auth.onSessionExpired] Sessão expirada detectada pelo ApiService');
        logout();
     };
