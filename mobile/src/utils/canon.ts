@@ -242,9 +242,10 @@ export function normalizeEstadoCadastro(val: string | null | undefined): EstadoC
 /**
  * Normaliza a Lotação.
  */
-export function normalizeLotacao(val: string | null | undefined): string {
+export function normalizeLotacao(val: string | null | undefined): string | null {
   const s = slugify(val);
-  if (!s || s === 'NENHUMA') return 'NENHUMA';
+  if (!s) return null;
+  if (s === 'NENHUMA') return 'NENHUMA';
 
   for (const lot of LOTACOES) {
     if (slugify(lot) === s) return lot;
@@ -257,7 +258,7 @@ export function normalizeLotacao(val: string | null | undefined): string {
   if (s.includes('LINHARES')) return "DEL 04 - Linhares";
   if (s.includes('SEDE')) return "SEDE";
 
-  return 'SEDE';
+  return null;
 }
 
 /**
