@@ -56,3 +56,10 @@ As seções abaixo seguem a ordem de exibição e o agrupamento visual (com core
   - O módulo **Repasse** foi movido da seção de Gestão para Serviços, tornando-se visível para todos os filiados, embora as funções de edição permaneçam restritas via permissões de backend.
   - A visibilidade de itens no App agora é filtrada dinamicamente no `CustomDrawerContent.tsx` com base nas rotas realmente disponíveis no `DrawerNavigator`, mantendo coerência com o RBAC.
   - Os itens de gestão renderizados no Drawer (ex.: **Notificações**, **Novo Filiado**, **Diagnóstico**) exibem estado ativo corretamente.
+
+## 3. Histórico de Sincronização e Manutenção
+
+### [2026-05-08] Sincronização de Lógica Canônica (Guardian Soft)
+- **Localização**: `normalizeLotacao` no App sincronizado com o Backend. Removidos fallbacks indevidos ('SEDE', 'NENHUMA') para garantir que apenas o Backend defina valores padrão ou nulos.
+- **Dependentes**: `normalizeParentesco` no App corrigido para retornar `null` em campos vazios, evitando a persistência da label 'OUTRO' quando não há dados.
+- **Datas e Idade**: `calculateAgeBreakdown` e `parseBRToISO` no App harmonizados com `shared/date/age.js` e `shared/format/index.js`. Garante que a string de idade (Ex: "X anos, Y meses e Z dias") seja idêntica em todas as plataformas e o parsing de datas seja robusto para ambos os formatos (BR/ISO).
