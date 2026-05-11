@@ -6,14 +6,20 @@
  *
  * This service must exclusively use API_BASE_URL which resolves to api.sinprfes.org.br in production.
  */
-import axios from 'axios';
+import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import { API_BASE_URL } from '../config/env';
 import { carregarSessao, limparSessao, carregarRefreshToken, salvarSessao, temRefreshTokenGravado } from './storageService';
 import { logger } from '../infra/logger';
 import { AuthStore } from './authStore';
+import type { Filiado } from '../types/filiado';
 
 let isRefreshing = false;
-let failedQueue: any[] = [];
+type FailedQueueEntry = { resolve: (token: string | null) => void; reject: (error: unknown) => void };
+type ApiResponse<T> = { data?: T; [key: string]: unknown };
+type ListaFiliadosResponse = { filiados?: Filiado[] };
+type FiliadoPayload = Partial<Filiado> & Record<string, unknown>;
+
+let failedQueue: FailedQueueEntry[] = [];
 let lastAuthErrorTimestamp = 0;
 let pendingRefreshAccessTokenPromise: Promise<string> | null = null;
 
@@ -33,14 +39,16 @@ const triggerSessionExpired = async (reason: string, url?: string) => {
   }
 };
 
-const shouldForceLogoutAfterRefreshError = (refreshError: any): boolean => {
-  const status = refreshError?.response?.status;
-  const errorMsg = String(refreshError?.response?.data?.error || refreshError?.response?.data?.message || refreshError?.message || '').toLowerCase();
+const shouldForceLogoutAfterRefreshError = (refreshError: unknown): boolean => {
+  const typedError = refreshError as AxiosError<ApiResponse<{ error?: string; message?: string }>>;
+  const responseData = typedError.response?.data;
+  const status = typedError.response?.status;
+  const errorMsg = String(responseData?.error || responseData?.message || typedError.message || '').toLowerCase();
   return status === 401 || errorMsg.includes('invalid_grant') || errorMsg.includes('refresh token');
 };
 
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach((prom: any) => {
+const processQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
@@ -133,7 +141,7 @@ const isProtectedRoute = (url: string | undefined): boolean => {
   return url.startsWith('/api/') || protectedPatterns.some(pattern => url.includes(pattern));
 };
 
-function maskSensitiveData(obj: any): any {
+function maskSensitiveData(obj: unknown): unknown {
   try {
     if (!obj || typeof obj !== 'object') return obj;
     const masked = Array.isArray(obj) ? [...obj] : { ...obj };
@@ -142,13 +150,14 @@ function maskSensitiveData(obj: any): any {
     Object.keys(masked).forEach(key => {
       const lowerKey = key.toLowerCase();
       if (keysToMask.includes(lowerKey)) {
-        if (lowerKey === 'cpf' && typeof (masked as any)[key] === 'string' && (masked as any)[key].length === 11) {
-          (masked as any)[key] = (masked as any)[key].substring(0, 3) + '.***.***-' + (masked as any)[key].substring(9);
+        if (lowerKey === 'cpf' && typeof (masked as Record<string, unknown>)[key] === 'string' && ((masked as Record<string, unknown>)[key] as string).length === 11) {
+          const cpf = (masked as Record<string, unknown>)[key] as string;
+          (masked as Record<string, unknown>)[key] = cpf.substring(0, 3) + '.***.***-' + cpf.substring(9);
         } else {
-          (masked as any)[key] = '********';
+          (masked as Record<string, unknown>)[key] = '********';
         }
-      } else if (typeof (masked as any)[key] === 'object') {
-        (masked as any)[key] = maskSensitiveData((masked as any)[key]);
+      } else if (typeof (masked as Record<string, unknown>)[key] === 'object') {
+        (masked as Record<string, unknown>)[key] = maskSensitiveData((masked as Record<string, unknown>)[key]);
       }
     });
     return masked;
@@ -159,7 +168,7 @@ function maskSensitiveData(obj: any): any {
 
 // Interceptor para injetar o token JWT e loggar a requisição
 api.interceptors.request.use(
-  async (config: any) => {
+  async (config: InternalAxiosRequestConfig & { meta?: { requestStartedAt: number }; _retry?: boolean }) => {
     // Se for rota protegida, aguarda o bootstrap do AuthStore terminar
     if (isProtectedRoute(config.url)) {
       await AuthStore.waitReady();
@@ -216,10 +225,10 @@ api.interceptors.request.use(
 
 // Interceptor para tratar e loggar respostas
 api.interceptors.response.use(
-  (response: any) => {
+  (response: AxiosResponse) => {
     const { config, status, data } = response;
     const { method, url } = config;
-    const duration = new Date().getTime() - config.meta.requestStartedAt;
+    const duration = new Date().getTime() - ((config as InternalAxiosRequestConfig & { meta?: { requestStartedAt: number } }).meta?.requestStartedAt || 0);
 
     logger.info(`API_RES: ${method?.toUpperCase()} ${url} | Status: ${status} | ${duration}ms`, {
       dataShape: data ? Object.keys(data) : undefined
@@ -384,11 +393,16 @@ api.interceptors.response.use(
         processQueue(refreshError, null);
         isRefreshing = false;
 
-        logger.error('API_401_REFRESH_FAIL', {
+        const refreshErr = refreshError as AxiosError<ApiResponse<{ error?: string; message?: string }>>;
+        logger.error(
+          `API_401_REFRESH_FAIL: ${refreshErr.message}`,
+          refreshErr instanceof Error ? refreshErr : new Error(String(refreshErr)),
+          {
           url,
-          status: refreshError.response?.status,
-          message: refreshError.message
-        });
+          status: refreshErr.response?.status,
+          message: refreshErr.message
+          }
+        );
 
         if (refreshError?.message === 'NO_REFRESH_TOKEN') {
           logger.warn('API_401_REFRESH_SKIPPED: No refresh token available', { url });
@@ -419,16 +433,21 @@ api.interceptors.response.use(
  * Busca a lista de filiados.
  * A API retornará os campos de acordo com o perfil do usuário logado.
  */
-export const getFiliados = async (params?: any) => {
-  const response = await api.get('/api/filiados', { params });
-  return response.data.filiados || response.data || [];
+export const getFiliados = async (params?: Record<string, unknown>): Promise<Filiado[]> => {
+  const response = await api.get<ApiResponse<ListaFiliadosResponse | Filiado[]>>('/api/filiados', { params });
+  const payload = response.data;
+  if (Array.isArray(payload)) return payload as Filiado[];
+  if (payload && typeof payload === 'object' && Array.isArray((payload as ListaFiliadosResponse).filiados)) {
+    return (payload as ListaFiliadosResponse).filiados || [];
+  }
+  return [];
 };
 
-export const criarFiliado = async (filiadoData) => {
+export const criarFiliado = async (filiadoData: FiliadoPayload) => {
   return await api.post('/api/filiados', filiadoData);
 };
 
-export const atualizarFiliado = async (id, filiadoData) => {
+export const atualizarFiliado = async (id: string | number, filiadoData: FiliadoPayload) => {
   if (__DEV__) {
     console.log('--- [DEV] Payload para atualizarFiliado ---');
     console.log('ID:', id);
@@ -438,11 +457,11 @@ export const atualizarFiliado = async (id, filiadoData) => {
   return await api.put(`/api/filiados/${id}`, filiadoData);
 };
 
-export const arquivarFiliado = async (id, motivo) => {
+export const arquivarFiliado = async (id: string | number, motivo: string) => {
   return await api.post(`/api/filiados/${id}/arquivar`, { motivo });
 };
 
-export const desarquivarFiliado = async (id, motivo) => {
+export const desarquivarFiliado = async (id: string | number, motivo: string) => {
   return await api.post(`/api/filiados/${id}/desarquivar`, { motivo });
 };
 
