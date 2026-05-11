@@ -1,17 +1,27 @@
 // src/components/DependentesCard.tsx
 import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { PickerSafe } from './PickerSafe';
 import { Filiado } from '../types/filiado';
 import { formatCpf, onlyDigits } from '../shared/format/formatters';
-import { formatISOToBR, parseBRToISO, formatDateToDdMmYyyy, toBrazilianDate, calculateAgeBreakdown } from '../utils/date';
-import { PARENTESCO_OPTIONS, normalizeParentesco } from '../shared/parentesco';
+import { formatDateToDdMmYyyy, toBrazilianDate, calculateAgeBreakdown } from '../utils/date';
+import { PARENTESCO_OPTIONS } from '../shared/parentesco';
+import type { Dispatch, SetStateAction } from 'react';
+
+type DependenteIndex = 1 | 2 | 3 | 4 | 5;
+
+type DependenteItemProps = {
+  filiado: Filiado | null;
+  setFiliado: Dispatch<SetStateAction<Filiado | null>>;
+  index: DependenteIndex;
+  isEditing?: boolean;
+};
 
 // Subcomponente para cada item de dependente
-const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
+const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }: DependenteItemProps) => {
   const handleDateChange = (text: string) => {
     const formatted = formatDateToDdMmYyyy(text);
-    setFiliado(f => {
+    setFiliado((f: Filiado | null) => {
       if (!f) return null;
       return { ...f, [`dep${index}_data_nascimento`]: formatted };
     });
@@ -22,7 +32,7 @@ const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
     if (field === 'cpf') {
       finalValue = finalValue.slice(0, 11);
     }
-    setFiliado(f => {
+    setFiliado((f: Filiado | null) => {
       if (!f) return null;
       return { ...f, [`dep${index}_${field}`]: finalValue };
     });
@@ -36,8 +46,8 @@ const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
   const parentescoValue = filiado?.[`dep${index}_parentesco`] || '';
   const parentescoOutroValue = filiado?.[`dep${index}_parentesco_outro`] || '';
 
-  const handleParentescoChange = (mode) => {
-    setFiliado(f => {
+  const handleParentescoChange = (mode: string) => {
+    setFiliado((f: Filiado | null) => {
       if (!f) return null;
       return {
         ...f,
@@ -119,11 +129,19 @@ const DependenteItem = ({ filiado, setFiliado, index, isEditing = false }) => {
   );
 };
 
-const DependentesCard: React.FC<{filiado: Filiado | null, setFiliado: any, hideTitle?: boolean, cardStyle?: any, isEditing?: boolean}> = ({ filiado, setFiliado, hideTitle = false, cardStyle = {}, isEditing = false }) => {
+type DependentesCardProps = {
+  filiado: Filiado | null;
+  setFiliado: Dispatch<SetStateAction<Filiado | null>>;
+  hideTitle?: boolean;
+  cardStyle?: StyleProp<ViewStyle>;
+  isEditing?: boolean;
+};
+
+const DependentesCard: React.FC<DependentesCardProps> = ({ filiado, setFiliado, hideTitle = false, cardStyle, isEditing = false }) => {
   return (
     <View style={[styles.card, cardStyle]}>
       {!hideTitle && <Text style={styles.cardTitle}>Dependentes</Text>}
-      {[1, 2, 3, 4, 5].map(i => (
+      {([1, 2, 3, 4, 5] as const).map(i => (
         <DependenteItem key={i} index={i} filiado={filiado} setFiliado={setFiliado} isEditing={isEditing} />
       ))}
     </View>
