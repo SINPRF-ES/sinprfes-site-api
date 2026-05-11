@@ -128,7 +128,6 @@ const isProtectedRoute = (url: string | undefined): boolean => {
   const protectedPatterns = [
     '/api/publicacoes',
     '/api/push/register',
-    '/api/jogos/',
     '/api/filiados/',
     '/api/auth/me',
     '/api/diagnostico/log',
@@ -301,12 +300,11 @@ api.interceptors.response.use(
       axiosCode: error.code
     };
 
-    // Redução de ruído para erros best-effort (ex: Push Register 500, Jogos check 404, Diagnóstico 401)
+    // Redução de ruído para erros best-effort (ex: Push Register 500, Diagnóstico 401)
     const isPushRegister = url?.includes('/api/push/register');
-    const isJogosCheck = url?.includes('/api/jogos/inscricao') && method?.toLowerCase() === 'get';
     const isDiagnosticoLog = url?.includes('/api/diagnostico/log');
 
-    if ((isPushRegister && status === 500) || (isJogosCheck && status === 404) || (isDiagnosticoLog && status === 401)) {
+    if ((isPushRegister && status === 500) || (isDiagnosticoLog && status === 401)) {
       logger.warn(`API Best-Effort/Expected Fail: ${method?.toUpperCase()} ${url} | Status: ${status} | Message: ${message}`, { requestId });
     } else {
       // Preservamos o stack trace original passando o objeto error completo para o logger

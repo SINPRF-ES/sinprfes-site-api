@@ -31,7 +31,6 @@ const NAV_STRUCTURE = [
   { key: 'ressarcimento', routeName: 'Ressarcimento', label: 'Ressarcimento', emoji: EMOJI.RESSARCIMENTO, section: 'servicos', order: 100 },
   { key: 'assembleias', routeName: 'Votacao', label: 'Assembleias e Votações', emoji: EMOJI.ASSEMBLEIA, section: 'servicos', order: 110 },
   { key: 'enquetes', routeName: 'Enquetes', label: 'Enquetes', emoji: EMOJI.ENQUETES, section: 'servicos', order: 120 },
-  { key: 'jogos', routeName: 'Jogos2026', label: 'Jogos 2026', emoji: EMOJI.JOGOS, section: 'servicos', order: 130 },
   { key: 'repasse', routeName: 'Repasse', label: 'Repasse', emoji: EMOJI.REPASSE, section: 'servicos', order: 140 },
   { key: 'consulta-processual', routeName: 'ConsultaProcessual', label: 'Consulta Processual', emoji: EMOJI.CONSULTA_PROCESSUAL, section: 'gestao', order: 150 },
   { key: 'estatisticas', routeName: 'Estatisticas', label: 'Estatísticas', emoji: EMOJI.ESTATISTICAS, section: 'gestao', order: 160 },
@@ -96,7 +95,6 @@ const CustomDrawerContent = (props: DrawerContentComponentProps) => {
     .filter((item) => routeSet.has(item.routeName))
     .filter((item) => {
       if (item.routeName === 'NotificacoesPush' || item.routeName === 'CriarFiliado') return ehGestao;
-      if (item.routeName === 'Jogos2026') return ehGestao;
       if (item.routeName === 'Logs') return ehDiretoria;
       return true;
     })

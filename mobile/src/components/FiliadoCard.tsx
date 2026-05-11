@@ -50,6 +50,13 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
   };
 
   const situacaoLabel = situacaoNormalizada || 'NÃO INFORMADO';
+  const situacaoRaw = filiado.situacao?.replace(/\s+/g, '') || '';
+  const situacaoStyleMap: Record<string, object> = {
+    ATIVO: styles.situacaoATIVO,
+    VETERANO: styles.situacaoVETERANO,
+    PENSIONISTA: styles.situacaoPENSIONISTA,
+  };
+  const situacaoChipStyle = situacaoStyleMap[situacaoRaw] ?? styles.situacaoDefault;
   const situacaoSindical = (filiado.situacao_sindical || SITUACAO_SINDICAL.FILIADO_SINPRF_ES).toUpperCase();
   const situacaoSindicalLabel = SITUACAO_SINDICAL_LABELS[situacaoSindical] || situacaoSindical;
   const ufSindicatoExterno = (filiado.uf_sindicato_externo || '').toUpperCase();
@@ -105,7 +112,7 @@ const FiliadoCard: React.FC<FiliadoCardProps> = ({ filiado, currentUserProfile, 
 
           <View style={styles.footer}>
             {filiado.situacao && (
-              <Text style={[styles.situacao, styles[`situacao${filiado.situacao.replace(/\s+/g, '')}`]]}>
+              <Text style={[styles.situacao, situacaoChipStyle]}>
                 {filiado.situacao}
               </Text>
             )}
