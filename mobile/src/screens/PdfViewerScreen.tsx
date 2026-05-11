@@ -5,6 +5,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { logger } from '../infra/logger';
 import { FontAwesome } from '@expo/vector-icons';
 import SafeScreen from '../components/SafeScreen';
+import { toError } from '../infra/errorUtils';
 
 export default function PdfViewerScreen({ route }: any) {
   const { localUri, title, fileId } = route.params;
@@ -23,8 +24,8 @@ export default function PdfViewerScreen({ route }: any) {
         title: title,
       });
       logger.info('[pdf.share.success]');
-    } catch (err: any) {
-      logger.error('[pdf.share.error]', err);
+    } catch (err: unknown) {
+      logger.error('[pdf.share.error]', toError(err));
     }
   };
 
@@ -56,8 +57,8 @@ export default function PdfViewerScreen({ route }: any) {
       } else {
         handleShare();
       }
-    } catch (err: any) {
-      logger.error('[pdf.save.error]', err);
+    } catch (err: unknown) {
+      logger.error('[pdf.save.error]', toError(err));
       handleShare();
     }
   };
@@ -90,7 +91,7 @@ export default function PdfViewerScreen({ route }: any) {
         }}
         onError={(error) => {
           setLoading(false);
-          logger.error('[pdf.open.native.error]', error);
+          logger.error('[pdf.open.native.error]', toError(error));
           Alert.alert(
             'Erro de Visualização',
             'Não foi possível abrir o PDF nativamente. Deseja compartilhar para abrir em outro app?',
