@@ -1,9 +1,12 @@
 const express = require("express");
 const request = require("supertest");
 
-jest.mock("../middlewares/auth", () => (req, _res, next) => {
-  req.user = { id: 1, perfil_acesso: req.headers["x-test-perfil"] || "FILIADO", situacao_sindical: "FILIADO_SINPRF_ES" };
-  next();
+jest.mock("../middlewares/auth", () => {
+  const { createTestUser } = require('../tests/factories/testUserFactory');
+  return (req, _res, next) => {
+    req.user = createTestUser({ perfil_acesso: req.headers["x-test-perfil"] || "FILIADO" });
+    next();
+  };
 });
 
 jest.mock("../controllers/polls.controller", () => ({
