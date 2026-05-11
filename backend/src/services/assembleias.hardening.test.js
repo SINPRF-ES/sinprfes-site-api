@@ -36,7 +36,7 @@ describe('Assembleias Hardening and Concurrency', () => {
        .mockResolvedValueOnce({ rows: [] }) // Close previous
        .mockResolvedValueOnce({ rows: [{ id: 'q1' }] }) // Insert
        .mockResolvedValueOnce({ rows: [] }) // Audit
-       .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA' }] }) // user checkin profile
+       .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA', situacao_sindical: 'FILIADO_SINPRF_ES' }] }) // user checkin profile
        .mockResolvedValueOnce({ rows: [{ id: 'c1' }] }) // checkin
        .mockResolvedValueOnce({ rows: [] }); // COMMIT
 

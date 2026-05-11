@@ -137,7 +137,7 @@ describe('Assembleias V5 Integration Tests', () => {
             return Promise.resolve({ rows: [] });
         }
         if (q.includes('COUNT(*)') && q.includes('filiados')) return Promise.resolve({ rows: [{ total: 10 }] });
-        if (q.includes('SELECT perfil_acesso FROM filiados')) return Promise.resolve({ rows: [{ perfil_acesso: 'DIRETORIA' }] });
+        if (q.includes('SELECT perfil_acesso, situacao_sindical FROM filiados')) return Promise.resolve({ rows: [{ perfil_acesso: 'DIRETORIA', situacao_sindical: 'FILIADO_SINPRF_ES' }] });
         if (q.includes('INSERT INTO assembleia_quoruns')) return Promise.resolve({ rows: [{ id: 'q1', token: '111222' }] });
         return Promise.resolve({ rows: [] });
       });
@@ -163,7 +163,7 @@ describe('Assembleias V5 Integration Tests', () => {
         if (q.includes('assembleia_quoruns') && q.includes('SELECT') && q.includes('encerrado_em IS NULL')) {
             return Promise.resolve({ rows: [{ id: 'q1', token: '111222' }] });
         }
-        if (q.includes('SELECT perfil_acesso FROM filiados')) return Promise.resolve({ rows: [{ perfil_acesso: 'DIRETORIA' }] });
+        if (q.includes('SELECT perfil_acesso, situacao_sindical FROM filiados')) return Promise.resolve({ rows: [{ perfil_acesso: 'DIRETORIA', situacao_sindical: 'FILIADO_SINPRF_ES' }] });
         return Promise.resolve({ rows: [] });
       });
 

@@ -2,7 +2,7 @@ const express = require("express");
 const request = require("supertest");
 
 jest.mock("../middlewares/auth", () => (req, _res, next) => {
-  req.user = { id: 1, perfil_acesso: req.headers["x-test-perfil"] || "FILIADO" };
+  req.user = { id: 1, perfil_acesso: req.headers["x-test-perfil"] || "FILIADO", situacao_sindical: "FILIADO_SINPRF_ES" };
   next();
 });
 
