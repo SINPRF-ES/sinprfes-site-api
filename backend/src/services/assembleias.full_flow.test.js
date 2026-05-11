@@ -2,6 +2,7 @@
 const pool = require('../config/db');
 const service = require('./assembleias.service');
 const Textos = require('../utils/textos');
+const { createTestUser } = require('../tests/factories/testUserFactory');
 
 jest.mock('../config/db', () => {
   const mClient = {
@@ -53,7 +54,7 @@ describe('Assembleias Full Flow (Service Layer Integration)', () => {
     mockClient.query.mockResolvedValueOnce({ rows: [] }); // close previous
     mockClient.query.mockResolvedValueOnce({ rows: [{ id: quorumId, token: '111222' }] }); // insert quorum
     mockClient.query.mockResolvedValueOnce({ rows: [] }); // audit
-    mockClient.query.mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA' }] }); // user check-in perfil
+    mockClient.query.mockResolvedValueOnce({ rows: [createTestUser({ perfil_acesso: 'DIRETORIA' })] }); // user check-in perfil
     mockClient.query.mockResolvedValueOnce({ rows: [{ id: 'c1' }] }); // checkin
     mockClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
     const quorum = await service.gerarQuorum({ assembleia_id: assId, token: '111222', gerado_por_user_id: userId, tipo_chamada: 'PRIMEIRA' });
@@ -93,9 +94,16 @@ describe('Assembleias Full Flow (Service Layer Integration)', () => {
     await service.criarVotacao({ assembleia_id: assId, quorum_snapshot_id: quorumId, titulo: 'Item 1', iniciada_por_user_id: 10 });
 
     // 7. Votar
-    pool.query.mockResolvedValueOnce({ rows: [{ perfil_acesso: 'FILIADO' }] }); // perfil check
-    pool.query.mockResolvedValueOnce({ rows: [{ id: 'vote-1', voto: 'SIM' }] }); // insert vote
-    pool.query.mockResolvedValueOnce({ rows: [] }); // Audit
+    pool.query.mockReset();
+    pool.query.mockImplementation((q) => {
+      if (q.includes('SELECT perfil_acesso, situacao_sindical FROM filiados WHERE id = $1')) {
+        return Promise.resolve({ rows: [createTestUser({ id: 30, perfil_acesso: 'FILIADO' })] });
+      }
+      if (q.includes('INSERT INTO assembleia_votos')) {
+        return Promise.resolve({ rows: [{ id: 'vote-1', voto: 'SIM' }] });
+      }
+      return Promise.resolve({ rows: [] });
+    });
     await service.registrarVoto(votId, 30, 'SIM', assId);
 
     // 8. Finalizar Votação

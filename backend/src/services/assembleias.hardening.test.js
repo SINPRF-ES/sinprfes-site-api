@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const service = require('./assembleias.service');
 const Textos = require('../utils/textos');
+const { createTestUser } = require('../tests/factories/testUserFactory');
 
 jest.mock('../config/db', () => {
   const mClient = {
@@ -36,7 +37,7 @@ describe('Assembleias Hardening and Concurrency', () => {
        .mockResolvedValueOnce({ rows: [] }) // Close previous
        .mockResolvedValueOnce({ rows: [{ id: 'q1' }] }) // Insert
        .mockResolvedValueOnce({ rows: [] }) // Audit
-       .mockResolvedValueOnce({ rows: [{ perfil_acesso: 'DIRETORIA' }] }) // user checkin profile
+       .mockResolvedValueOnce({ rows: [createTestUser({ perfil_acesso: 'DIRETORIA' })] }) // user checkin profile
        .mockResolvedValueOnce({ rows: [{ id: 'c1' }] }) // checkin
        .mockResolvedValueOnce({ rows: [] }); // COMMIT
 

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Button } from 'react-native';
 import { Filiado } from '../types/filiado';
-import { UserProfile } from '../hooks/useAuth';
+import type { PerfilAcesso } from '../utils/canon';
 import { formatCpf, formatTelefone } from '../shared/format/formatters';
 import { normalizeSituacaoFuncional } from '../utils/filiadoUtils';
 import { calculateAgeBreakdown, formatISOToBRDateTime } from '../utils/date';
@@ -11,7 +11,7 @@ import { SITUACAO_SINDICAL, SITUACAO_SINDICAL_LABELS } from '../utils/canon';
 // Adicionando situacaoFuncional para refletir o modelo de dados completo.
 interface FiliadoCardProps {
   filiado: Filiado & { situacaoFuncional?: string };
-  currentUserProfile: UserProfile;
+  currentUserProfile: PerfilAcesso;
   onEdit: (filiado: Filiado) => void;
 }
 

@@ -13,7 +13,8 @@
     "check:playwright:legacy": "node scripts/check-playwright.js",
     "playwright:install": "node scripts/prepare-playwright.js",
     "check:deps": "node scripts/check-root-deps.js",
-    "preinstall": "node scripts/check-root-deps.js"
+    "preinstall": "node scripts/check-root-deps.js",
+    "test:manual": "jest --testMatch='**/*.manual.js'"
   },
   "keywords": [
     "sinprf-es",
