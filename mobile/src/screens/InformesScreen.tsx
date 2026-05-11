@@ -4,13 +4,19 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchInformes, InformePost } from '../services/informesService';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FontAwesome } from '@expo/vector-icons';
 import { logger } from '../infra/logger';
 import SafeScreen from '../components/SafeScreen';
 import HeaderMenu, { MenuAction } from '../components/HeaderMenu';
+import type { RootStackParamList } from '../navigation';
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
 
 export default function InformesScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { usuario } = useAuth();
 
   const { data: informes, isLoading, isError, refetch, isRefetching } = useQuery({
@@ -72,7 +78,7 @@ export default function InformesScreen() {
         </TouchableOpacity>
       );
     } catch (err) {
-      logger.error('Error rendering Informe item', err, { newsId: item?.id });
+      logger.error('Error rendering Informe item', toError(err), { newsId: item?.id });
       return null;
     }
   };
@@ -81,7 +87,7 @@ export default function InformesScreen() {
   try {
     ehGestaoInformes = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO', 'COMUNICADOR'].includes((usuario?.perfil_acesso || '').toUpperCase());
   } catch (err) {
-    logger.error('Error checking management permission in InformesScreen', err);
+    logger.error('Error checking management permission in InformesScreen', toError(err));
   }
 
   useLayoutEffect(() => {
@@ -135,7 +141,7 @@ export default function InformesScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} color="#003366" />
+          <RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} colors={['#003366']} />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>

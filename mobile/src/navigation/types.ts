@@ -10,7 +10,6 @@ export type DrawerParamList = {
   Publicacoes: undefined;
   Convenios: undefined;
   Ressarcimento: undefined;
-  Jogos2026: undefined;
   Votacao: undefined;
   Estatuto: undefined;
   Seguranca: undefined;

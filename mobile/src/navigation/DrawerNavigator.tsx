@@ -17,7 +17,6 @@ import CriarFiliadoScreen from '../screens/CriarFiliadoScreen';
 import PublicacoesScreen from '../screens/PublicacoesScreen';
 import ConveniosScreen from '../screens/ConveniosScreen';
 import RessarcimentoScreen from '../screens/RessarcimentoScreen';
-import JogosScreen from '../screens/JogosScreen';
 import EstatutoScreen from '../screens/EstatutoScreen';
 import AtualizacoesScreen from '../screens/AtualizacoesScreen';
 import NotificacoesPushScreen from '../screens/NotificacoesPushScreen';
@@ -152,17 +151,6 @@ export default function DrawerNavigator() {
           drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.RESSARCIMENTO} label="Ressarcimento" {...props} />,
         }}
       />
-
-      {ehGestaoUsuario && !isComunicador && (
-      <Drawer.Screen
-        name="Jogos2026"
-        component={JogosScreen}
-        options={{
-          title: 'Jogos 2026',
-          drawerLabel: (props) => <DrawerItemLabel emoji={EMOJI.JOGOS} label="Jogos 2026" {...props} />,
-        }}
-      />
-      )}
 
       {!isComunicador && (
       <Drawer.Screen

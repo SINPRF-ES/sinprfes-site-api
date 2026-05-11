@@ -1,5 +1,5 @@
 // mobile/src/screens/CriarFiliadoScreen.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, type Dispatch, type SetStateAction } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, Button, StyleSheet, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
@@ -50,6 +50,18 @@ export default function CriarFiliadoScreen({ navigation }: any) {
 
   const [filiado, setFiliado] = useState<Partial<Filiado>>(initialFiliadoState);
   const [loading, setLoading] = useState(false);
+
+
+  const setFiliadoCardState: Dispatch<SetStateAction<Filiado | null>> = useCallback((nextState) => {
+    setFiliado((prev) => {
+      const prevAsFiliado = (prev ?? initialFiliadoState) as Filiado;
+      if (typeof nextState === 'function') {
+        const resolved = nextState(prevAsFiliado);
+        return resolved ?? initialFiliadoState;
+      }
+      return nextState ?? initialFiliadoState;
+    });
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -121,12 +133,15 @@ export default function CriarFiliadoScreen({ navigation }: any) {
       const payload = { ...filiado };
 
       // Normalização
-      if (payload.nome) payload.nome = normalizeNome(payload.nome);
-      if (payload.sexo === '') payload.sexo = null;
-      payload.cpf = payload.cpf ? onlyDigits(payload.cpf) : null;
+      if (payload.nome) {
+        const nomeNormalizado = normalizeNome(payload.nome);
+        if (nomeNormalizado) payload.nome = nomeNormalizado;
+      }
+      payload.sexo = payload.sexo ?? null;
+      payload.cpf = payload.cpf ? onlyDigits(payload.cpf) : undefined;
       if (payload.siape) payload.siape = onlyDigits(payload.siape).slice(0, 7);
-      payload.telefone1 = payload.telefone1 ? onlyDigits(payload.telefone1) : null;
-      payload.telefone2 = payload.telefone2 ? onlyDigits(payload.telefone2) : null;
+      payload.telefone1 = payload.telefone1 ? onlyDigits(payload.telefone1) : undefined;
+      payload.telefone2 = payload.telefone2 ? onlyDigits(payload.telefone2) : undefined;
       payload.cep = onlyDigits(payload.cep);
 
       if (payload.data_nascimento) {
@@ -189,13 +204,13 @@ export default function CriarFiliadoScreen({ navigation }: any) {
       {/* Reutilizar os cards para entrada de dados */}
       <ContatoCard
         filiado={filiado as Filiado}
-        setFiliado={setFiliado}
+        setFiliado={setFiliadoCardState}
         isEditing={true}
         isManagement={true}
       />
-      <EnderecoCard filiado={filiado as Filiado} setFiliado={setFiliado} />
-      <LotacaoCard filiado={filiado as Filiado} setFiliado={setFiliado} isEditing={true} />
-      <DependentesCard filiado={filiado as Filiado} setFiliado={setFiliado} isEditing={true} />
+      <EnderecoCard filiado={filiado as Filiado} setFiliado={setFiliadoCardState} />
+      <LotacaoCard filiado={filiado as Filiado} setFiliado={setFiliadoCardState} isEditing={true} />
+      <DependentesCard filiado={filiado as Filiado} setFiliado={setFiliadoCardState} isEditing={true} />
 
     </KeyboardAwareScrollView>
     </SafeScreen>
