@@ -9,7 +9,7 @@ export const setupGlobalErrorHandling = () => {
   if (ErrorUtils) {
     const defaultHandler = ErrorUtils.getGlobalHandler();
 
-    ErrorUtils.setGlobalHandler((error: Error, isFatal: boolean) => {
+    ErrorUtils.setGlobalHandler((error: Error, isFatal?: boolean) => {
       logger.error('Global Error', error, { isFatal });
 
       // Chama o handler original (que geralmente exibe a tela vermelha)

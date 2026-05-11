@@ -86,7 +86,7 @@ export default function RootNavigation() {
   if (carregando) return null;
 
   return (
-    <NavigationContainer
+    <NavigationContainer<RootStackParamList>
       ref={(ref) => {
         navigationRef.current = ref;
         tryConsumePendingNav();
