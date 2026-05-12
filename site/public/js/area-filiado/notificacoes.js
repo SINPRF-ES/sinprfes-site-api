@@ -307,13 +307,21 @@
     }
 
     titleInput.oninput = () => {
+      const len = titleInput.value.length;
       const counter = document.getElementById("push-title-count");
-      if (counter) counter.textContent = String(titleInput.value.length);
+      if (counter) {
+        counter.textContent = String(len);
+        counter.parentElement.classList.toggle("ui-text-danger", len >= 54);
+      }
     };
 
     messageInput.oninput = () => {
+      const len = messageInput.value.length;
       const counter = document.getElementById("push-message-count");
-      if (counter) counter.textContent = String(messageInput.value.length);
+      if (counter) {
+        counter.textContent = String(len);
+        counter.parentElement.classList.toggle("ui-text-danger", len >= 216);
+      }
     };
 
     btnSend.onclick = handleSend;
