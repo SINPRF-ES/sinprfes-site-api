@@ -7,6 +7,7 @@ const auth = require("../middlewares/auth");
 const requirePermission = require("../middlewares/requirePermission");
 const controller = require("../controllers/assembleias.controller");
 const { assemblyCommandLimiter, checkinLimiter, stateLimiter, diagnosticLimiter } = require("../middlewares/assembleiaRateLimit");
+const { resourceIntensiveLimiter } = require("../middlewares/securityRateLimit");
 
 // Verificação defensiva de boot: garante que todos os handlers existem no controller
 const required = [
@@ -62,13 +63,13 @@ router.post("/:id/propostas", auth, controller.criarProposta);
 router.post("/:id/propostas/:prid/votar", auth, assemblyCommandLimiter, controller.iniciarVotacaoProposta);
 
 // Relatório (Governança interna no controller: todos exceto COMUNICADOR podem gerar se encerrada)
-router.post("/:id/relatorio", auth, controller.gerarRelatorio);
+router.post("/:id/relatorio", auth, resourceIntensiveLimiter, controller.gerarRelatorio);
 
 // Diagnóstico (Admin e Diretoria)
 router.get("/:id/diagnostico", auth, (req, res, next) => {
     if (req.user.perfil_acesso === 'ADMIN' || req.user.perfil_acesso === 'DIRETORIA') return next();
     res.status(403).json({ error: "Acesso restrito a administradores ou diretoria" });
-}, controller.diagnostico);
+}, resourceIntensiveLimiter, controller.diagnostico);
 
 router.post("/:id/diagnostico/limpar-logs", auth, (req, res, next) => {
     if (req.user.perfil_acesso === 'ADMIN' || req.user.perfil_acesso === 'DIRETORIA') return next();
