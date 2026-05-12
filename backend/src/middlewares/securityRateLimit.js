@@ -47,9 +47,22 @@ const pushCampaignLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+/**
+ * Limiter para Operações Intensivas (Relatórios, Scraping)
+ * Protege contra exaustão de recursos e ataques de DoS.
+ */
+const resourceIntensiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // limite de 5 solicitações por IP
+  message: { error: 'Limite de solicitações intensivas atingido. Por favor, aguarde 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   loginLimiter,
   passwordResetLimiter,
   publicFormLimiter,
-  pushCampaignLimiter
+  pushCampaignLimiter,
+  resourceIntensiveLimiter
 };
