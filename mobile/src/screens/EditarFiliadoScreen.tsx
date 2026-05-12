@@ -16,6 +16,7 @@ import { Filiado } from '../types/filiado';
 import { logDebug, getCanonicalFiliadoId, parseCanonicalFiliadoId, isGestao as checkIsGestao, ROLES } from '../utils/filiadoUtils';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { logger } from '../infra/logger';
+import { toError } from '../infra/errorUtils';
 import api from '../services/apiService';
 import { TouchableOpacity } from 'react-native';
 import SafeScreen from '../components/SafeScreen';
@@ -59,8 +60,8 @@ export default function EditarFiliadoScreen({ route, navigation }: any) {
       });
 
       logDebug('EditarFiliado.fetch', { id: data.id, nome: data.nome });
-    } catch (err) {
-      logger.error('[EditarFiliado.fetch.error]', err);
+    } catch (err: unknown) {
+      logger.error('[EditarFiliado.fetch.error]', toError(err));
       Alert.alert('Erro', 'Não foi possível carregar os dados do filiado.');
     } finally {
       setLoading(false);

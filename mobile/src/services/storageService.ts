@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import type { Usuario } from '../types/usuario';
 import type { Sessao } from '../types/auth';
 import { logger } from '../infra/logger';
+import { toError } from '../infra/errorUtils';
 
 const TOKEN_KEY = 'sinprf_secure_token';
 const REFRESH_TOKEN_KEY = 'sinprf_refresh_token';
@@ -39,8 +40,8 @@ export async function salvarSessao(sessao: Sessao): Promise<void> {
     if (bioEnabled) {
       await SecureStore.setItemAsync(BIOMETRIC_CREDENTIAL_KEY, sessao.token);
     }
-  } catch (e) {
-    logger.error('[Storage.salvarSessao]', e);
+  } catch (e: unknown) {
+    logger.error('[Storage.salvarSessao]', toError(e));
   }
 }
 
@@ -54,8 +55,8 @@ export async function carregarSessao(): Promise<Sessao | null> {
 
     const usuario = JSON.parse(userJson) as Usuario;
     return { token, usuario };
-  } catch (e) {
-    logger.error('[Storage.carregarSessao]', e);
+  } catch (e: unknown) {
+    logger.error('[Storage.carregarSessao]', toError(e));
     return null;
   }
 }
@@ -73,8 +74,8 @@ export async function limparSessao(manterBiometria = true): Promise<void> {
       await SecureStore.deleteItemAsync(BIOMETRIA_SECURE_KEY);
       await AsyncStorage.removeItem(BIOMETRIA_KEY);
     }
-  } catch (e) {
-    logger.error('[Storage.limparSessao]', e);
+  } catch (e: unknown) {
+    logger.error('[Storage.limparSessao]', toError(e));
   }
 }
 
@@ -122,8 +123,8 @@ export async function carregarRefreshToken(): Promise<string | null> {
       const token = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
       lastRefreshResult = { token, timestamp: Date.now() };
       return token;
-    } catch (e) {
-      logger.error('[Storage.carregarRefreshToken]', e);
+    } catch (e: unknown) {
+      logger.error('[Storage.carregarRefreshToken]', toError(e));
       lastRefreshResult = { token: null, timestamp: Date.now() };
       return null;
     } finally {

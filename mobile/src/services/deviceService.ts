@@ -9,6 +9,7 @@ import { AuthStore } from './authStore';
 import { logger } from '../infra/logger';
 import { API_BASE_URL, APP_SCOPE } from '../config/env';
 import { getExpoProjectId } from '../utils/expoConfig';
+import { toError } from '../infra/errorUtils';
 
 const PUSH_REGISTRATION_META_KEY = 'push_registration_meta_v1';
 
@@ -21,7 +22,7 @@ async function shouldRegisterToken(token: string, expoProjectId?: string, force 
     const parsed = JSON.parse(raw);
     return parsed?.token !== token || parsed?.expoProjectId !== expoProjectId;
   } catch (error) {
-    logger.warn('Push info: erro ao ler metadados locais de registro', error);
+    logger.warn('Push info: erro ao ler metadados locais de registro', { error: toError(error).message });
     return true;
   }
 }
@@ -30,7 +31,7 @@ async function persistRegisteredTokenMeta(token: string, expoProjectId?: string)
   try {
     await AsyncStorage.setItem(PUSH_REGISTRATION_META_KEY, JSON.stringify({ token, expoProjectId, updatedAt: new Date().toISOString() }));
   } catch (error) {
-    logger.warn('Push info: erro ao persistir metadados locais de registro', error);
+    logger.warn('Push info: erro ao persistir metadados locais de registro', { error: toError(error).message });
   }
 }
 
@@ -53,12 +54,12 @@ export async function obterExpoPushToken(): Promise<{ token: string | null; plat
   let deviceId = 'unknown';
   try {
     if (Platform.OS === 'android') {
-      deviceId = Application.androidId || 'unknown_android';
+      deviceId = (await Application.getAndroidId()) || 'unknown_android';
     } else if (Platform.OS === 'ios') {
       deviceId = (await Application.getIosIdForVendorAsync()) || 'unknown_ios';
     }
   } catch (err) {
-    logger.warn('Push info: Erro ao obter deviceId', err);
+    logger.warn('Push info: Erro ao obter deviceId', { error: toError(err).message });
   }
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -83,8 +84,8 @@ export async function obterExpoPushToken(): Promise<{ token: string | null; plat
   try {
     const expoToken = await Notifications.getExpoPushTokenAsync({ projectId: easProjectId });
     return { token: expoToken.data, platform: Platform.OS, permission: finalStatus, projectId: easProjectId, expoProjectId: easProjectId, deviceId };
-  } catch (error: any) {
-    logger.error('Push info: Erro ao obter o Expo Push Token', error);
+  } catch (error: unknown) {
+    logger.error('Push info: Erro ao obter o Expo Push Token', toError(error));
     return { token: null, platform: Platform.OS, permission: finalStatus, projectId: easProjectId, expoProjectId: easProjectId, deviceId };
   }
 }
@@ -92,7 +93,20 @@ export async function obterExpoPushToken(): Promise<{ token: string | null; plat
 /**
  * Registra o dispositivo no backend para receber notificações push.
  */
-export async function registrarDispositivoParaPush(options?: { force?: boolean }): Promise<any> {
+type PushRegisterResult = {
+  success?: boolean;
+  ok?: boolean;
+  skipped?: boolean;
+  reason?: string;
+  message?: string;
+  hint?: string;
+  requestId?: string;
+  error?: string;
+  data?: { error?: string; requestId?: string; [key: string]: unknown };
+  status?: unknown;
+};
+
+export async function registrarDispositivoParaPush(options?: { force?: boolean }): Promise<PushRegisterResult> {
   // Aguarda inicialização da sessão antes de registrar push (exige token)
   await AuthStore.waitReady();
 
@@ -154,19 +168,26 @@ export async function registrarDispositivoParaPush(options?: { force?: boolean }
 
     return result;
 
-  } catch (e: any) {
-    const status = e.response?.status;
-    const errorData = e.response?.data;
-    const requestId = e.response?.headers?.['x-request-id'];
+  } catch (e: unknown) {
+    const maybeError = e as { response?: { status?: unknown; data?: unknown; headers?: Record<string, unknown> }; message?: string };
+    const status = maybeError.response?.status;
+    const errorData = maybeError.response?.data;
+    const rawRequestId = maybeError.response?.headers?.['x-request-id'];
+    const requestId = typeof rawRequestId === 'string' ? rawRequestId : undefined;
+    const err = toError(e);
 
     logger.warn('Falha ao registrar dispositivo para push (best-effort)', {
-      errorMessage: e.message,
+      errorMessage: err.message,
       status,
       errorData,
       requestId,
       apiUrl: `${API_BASE_URL}${endpoint}`
     });
     // Não relançar o erro para não bloquear o fluxo de login, mas retornar erro para o diagnóstico.
-    return { ok: false, error: e.message, status, data: errorData, requestId };
+    const data =
+      typeof errorData === 'object' && errorData !== null
+        ? (errorData as { error?: string; requestId?: string; [key: string]: unknown })
+        : undefined;
+    return { ok: false, error: err.message, status, data, requestId };
   }
 }
