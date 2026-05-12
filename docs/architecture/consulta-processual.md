@@ -45,3 +45,7 @@ Foram removidos do código ativo:
 ## Diretriz de evolução
 
 Qualquer expansão para outros tribunais deve ocorrer em branch separada, sem alterar o baseline TRF1-only em produção.
+
+## Nota de segurança (Mai/2026)
+
+Os endpoints de consulta processual (`/api/consulta-processual/me` e `/api/consulta-processual/debug/me`) estão sob hardening com `resourceIntensiveLimiter` (`5 req/15 min`), aplicado antecipadamente para mitigar abuso de scraping e custo excessivo de infraestrutura. A política consolidada (incluindo `trust proxy` e diretriz para novas rotas pesadas) está no `README.md`, seção **"Hardening de endpoints pesados — Mai/2026"**.

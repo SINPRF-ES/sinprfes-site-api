@@ -2,6 +2,8 @@
 
 Este documento consolida a configuração operacional do Railway para evitar divergência entre serviços.
 
+> Nota de segurança (Mai/2026): o hardening de rate limiting para endpoints pesados (limite `5 req/15 min`, `trust proxy`, cobertura 429 e rotas protegidas) está documentado centralmente no `README.md`, na seção **"Hardening de endpoints pesados — Mai/2026"**.
+
 ## 1. Serviço: API (Backend)
 
 A API deve usar build determinístico via Dockerfile do próprio backend.

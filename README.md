@@ -440,4 +440,28 @@ O sistema permite a geração de relatórios estruturados e dossiês individuais
 - **Configuração de E-mail:** A cópia para o sindicato é configurada via variável de ambiente `REPORTS_COPY_EMAIL`.
 - **Permissões:** O acesso ao módulo é restrito aos perfis de gestão (`ADMIN`, `DIRETORIA`, `FUNCIONARIO`) e ao perfil `ORGANIZADOR` (apenas visualização/geração conforme permissão `RELATORIOS_VER`).
 
-- 
+### Hardening de endpoints pesados — Mai/2026
+
+Para reduzir superfície de abuso em rotas com alto custo de CPU/DB/IO (relatórios, scraping judicial, diagnósticos e sincronizações), o backend aplica limiter dedicado **antes** das operações custosas e, quando aplicável, antes da autenticação/token validation.
+
+- **Limiter padrão:** `resourceIntensiveLimiter`
+- **Limite aplicado:** **5 requests / 15 minutos** por IP
+- **`trust proxy`:** `app.set('trust proxy', 1)` (compatível com Railway/Cloudflare)
+- **Teste automatizado:** integração de resposta **429** em `backend/src/tests/rate_limit.integration.test.js`
+
+**Endpoints protegidos:**
+- `POST /api/reports/generate`
+- `POST /api/reports/preview`
+- `GET /api/consulta-processual/me`
+- `GET /api/consulta-processual/debug/me`
+- `POST /api/assembleias/:id/relatorio`
+- `GET /api/assembleias/:id/diagnostico`
+- sincronizações pesadas de analytics/Cloudflare, quando cobertas no patch
+
+**Riscos mitigados:** DoS, exaustão de CPU/memória, abuso de scraping judicial, excesso de IO e consumo indevido de APIs externas.
+
+**Diretrizes:**
+- Rate limiter não substitui auth/RBAC.
+- Endpoints continuam exigindo autorização quando aplicável.
+- Operações pesadas devem usar limiter específico ou `resourceIntensiveLimiter`.
+- Novas rotas com Playwright, PDF/exportação, scraping, diagnóstico pesado ou analytics manual exigem revisão de rate limiting.
