@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Platform, type ViewStyle } from 'react-native';
 import { PickerSafe } from '../../components/PickerSafe';
 import SafeScreen from '../../components/SafeScreen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,8 +13,12 @@ import { logger } from '../../infra/logger';
 import { getAssembleiaStatusLabel, getAssembleiaStatusEmoji } from '../../utils/assembleiaLabels';
 
 import HeaderMenu, { MenuAction } from '../../components/HeaderMenu';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AssembleiaStackParamList } from '../../navigation/AssembleiaStack';
 
-export default function AssembleiasScreen({ navigation }: any) {
+type Props = NativeStackScreenProps<AssembleiaStackParamList, 'AssembleiaList'>;
+
+export default function AssembleiasScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { usuario } = useAuth();
   const [assembleias, setAssembleias] = useState<Assembleia[]>([]);
@@ -70,6 +74,13 @@ export default function AssembleiasScreen({ navigation }: any) {
     });
   }, [assembleias, filter]);
 
+  const badgeByEstado: Record<Assembleia['estado'], ViewStyle> = {
+    CRIADA: styles.badgeCRIADA,
+    ABERTA: styles.badgeABERTA,
+    EM_CURSO: styles.badgeEM_CURSO,
+    ENCERRADA: styles.badgeENCERRADA,
+  };
+
   // Otimização Bolt: Memoiza renderItem para evitar re-instanciação e re-renders no FlatList
   const renderItem = useCallback(({ item }: { item: Assembleia }) => {
     const dataBr = item.data_evento ? new Date(item.data_evento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '--/--/----';
@@ -83,7 +94,7 @@ export default function AssembleiasScreen({ navigation }: any) {
       }}
     >
       <View style={styles.cardHeader}>
-        <View style={[styles.badge, styles[`badge${item.estado}` as keyof typeof styles] || styles.badgeCRIADA]}>
+        <View style={[styles.badge, badgeByEstado[item.estado] || styles.badgeCRIADA]}>
           <Text style={styles.badgeText}>
             {getAssembleiaStatusLabel(item.estado)}
           </Text>
@@ -113,7 +124,7 @@ export default function AssembleiasScreen({ navigation }: any) {
           containerStyle={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginBottom: 0 }}
           pickerBoxStyle={{ flex: 1, height: 52 }}
           selectedValue={filter}
-          onValueChange={(itemValue) => setFilter(itemValue as any)}
+          onValueChange={(itemValue) => setFilter(itemValue as 'ativas' | 'encerradas' | 'todas')}
           dropdownIconColor="#003366"
           mode="dropdown"
           items={[

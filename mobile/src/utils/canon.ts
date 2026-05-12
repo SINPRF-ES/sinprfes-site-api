@@ -150,8 +150,17 @@ export function normalizeSituacaoFuncional(val: string | null | undefined): Situ
  * Normaliza o Perfil de Acesso.
  */
 export function normalizePerfil(val: string | null | undefined): PerfilAcesso {
-  const s = slugify(val) as any;
-  if (Object.values(PERFIL_ACESSO).includes(s)) return s;
+  const s = slugify(val);
+  if (
+    s === PERFIL_ACESSO.ADMIN ||
+    s === PERFIL_ACESSO.DIRETORIA ||
+    s === PERFIL_ACESSO.FUNCIONARIO ||
+    s === PERFIL_ACESSO.FILIADO ||
+    s === PERFIL_ACESSO.ORGANIZADOR ||
+    s === PERFIL_ACESSO.COMUNICADOR
+  ) {
+    return s;
+  }
   return PERFIL_ACESSO.FILIADO;
 }
 
@@ -162,7 +171,7 @@ export function isSituacaoSindicalValida(val: string | null | undefined): val is
 
 export function normalizeSituacaoSindical(
   val: string | null | undefined,
-  fallback: SituacaoSindical = SITUACAO_SINDICAL.FILIADO_SINPRF_ES
+  fallback: SituacaoSindical | null = SITUACAO_SINDICAL.FILIADO_SINPRF_ES
 ): SituacaoSindical | null {
   const s = slugify(val);
   if (!s) return fallback;
@@ -283,5 +292,5 @@ export function normalizeNome(input?: string | null): string | null {
  */
 export function ehPerfilGestao(perfil: string | null | undefined): boolean {
   const p = normalizePerfil(perfil);
-  return [PERFIL_ACESSO.ADMIN, PERFIL_ACESSO.DIRETORIA, PERFIL_ACESSO.FUNCIONARIO].includes(p);
+  return p === PERFIL_ACESSO.ADMIN || p === PERFIL_ACESSO.DIRETORIA || p === PERFIL_ACESSO.FUNCIONARIO;
 }

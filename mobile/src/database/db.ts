@@ -26,18 +26,6 @@ export async function initDb(): Promise<void> {
       situacao TEXT,
       atualizado_em TEXT
     );
-
-    CREATE TABLE IF NOT EXISTS offline_jogos_inscricoes (
-      filiado_id TEXT PRIMARY KEY NOT NULL,
-      nome_filiado TEXT,
-      modalidades TEXT,
-      sexo TEXT,
-      qtd_familiares INTEGER,
-      familiares TEXT,
-      observacoes TEXT,
-      data_inscricao TEXT,
-      data_nascimento TEXT
-    );
   `);
 }
 
@@ -75,40 +63,3 @@ export async function listarFiliadosOffline(): Promise<Filiado[]> {
   return rows;
 }
 
-export async function salvarJogosInscricoesOffline(lista: any[]): Promise<void> {
-  const db = await getDb();
-  await db.execAsync('DELETE FROM offline_jogos_inscricoes;');
-
-  const stmt = await db.prepareAsync(
-    `INSERT INTO offline_jogos_inscricoes
-       (filiado_id, nome_filiado, modalidades, sexo, qtd_familiares, familiares, observacoes, data_inscricao, data_nascimento)
-     VALUES ($filiado_id, $nome_filiado, $modalidades, $sexo, $qtd_familiares, $familiares, $observacoes, $data_inscricao, $data_nascimento)`
-  );
-
-  try {
-    for (const i of lista) {
-      await stmt.executeAsync({
-        $filiado_id: i.filiado_id,
-        $nome_filiado: i.nome_filiado,
-        $modalidades: JSON.stringify(i.modalidades || []),
-        $sexo: i.sexo,
-        $qtd_familiares: i.qtd_familiares,
-        $familiares: i.familiares,
-        $observacoes: i.observacoes,
-        $data_inscricao: i.data_inscricao,
-        $data_nascimento: i.data_nascimento,
-      });
-    }
-  } finally {
-    await stmt.finalizeAsync();
-  }
-}
-
-export async function listarJogosInscricoesOffline(): Promise<any[]> {
-  const db = await getDb();
-  const rows = await db.getAllAsync<any>('SELECT * FROM offline_jogos_inscricoes ORDER BY nome_filiado ASC;');
-  return rows.map(r => ({
-    ...r,
-    modalidades: JSON.parse(r.modalidades || '[]')
-  }));
-}

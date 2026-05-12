@@ -25,6 +25,7 @@ import PdfViewerScreen from '../screens/PdfViewerScreen';
 import FileViewerScreen from '../screens/FileViewerScreen';
 import InformeDetalheScreen from '../screens/InformeDetalheScreen';
 import InformeEditorScreen from '../screens/InformeEditorScreen';
+import VotacaoDetalheScreen from '../screens/VotacaoDetalheScreen';
 
 import UpdateAutoChecker from '../components/UpdateAutoChecker';
 
@@ -42,6 +43,7 @@ export type RootStackParamList = {
   FileViewer: { localUri?: string; remoteUrl?: string; title: string; fileId?: string; type?: string; context?: string };
   InformeDetalhe: { newsId?: string; publicRef?: string; module?: 'informes' | 'aniversarios' };
   InformeEditor: { newsId: string | null; module?: 'informes' | 'aniversarios' };
+  VotacaoDetalhe: { id: number };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -86,7 +88,7 @@ export default function RootNavigation() {
   if (carregando) return null;
 
   return (
-    <NavigationContainer
+    <NavigationContainer<RootStackParamList>
       ref={(ref) => {
         navigationRef.current = ref;
         tryConsumePendingNav();
@@ -144,6 +146,7 @@ export default function RootNavigation() {
 
             <Stack.Screen name="InformeDetalhe" component={InformeDetalheScreen} options={{ title: 'Informe' }} />
             <Stack.Screen name="InformeEditor" component={InformeEditorScreen} options={{ title: 'Editor de Informe' }} />
+            <Stack.Screen name="VotacaoDetalhe" component={VotacaoDetalheScreen} options={{ title: 'Detalhe da Votação' }} />
           </>
         )}
       </Stack.Navigator>
