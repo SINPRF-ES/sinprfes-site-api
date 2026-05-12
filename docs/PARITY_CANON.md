@@ -3,6 +3,8 @@
 ## 1. Visão Geral
 O **Canon de Paridade** é o conjunto de regras mandatórias que garantem a consistência funcional, visual e de dados entre o **App Mobile** e o **Site Institucional (Área do Filiado)**. O objetivo é evitar o "drift" (divergência) onde uma plataforma oferece recursos ou regras diferentes da outra.
 
+> Atualização de estado (Maio/2026): backend e mobile em estado estável (testes verdes), TypeScript mobile 100% verde e módulo Jogos 2026 descontinuado do fluxo ativo.
+
 ## 2. Pilares da Paridade
 
 ### 2.1. Backend como Única Fonte da Verdade (SSOT)
@@ -25,6 +27,7 @@ O **Canon de Paridade** é o conjunto de regras mandatórias que garantem a cons
 
 ### 3.2. Tratamento de Erros
 - Mensagens de erro disparadas pelo Backend devem ser exibidas de forma clara em ambas as plataformas, utilizando as strings definidas em `backend/src/utils/textos.js` quando possível.
+- No mobile, o tratamento deve priorizar helpers centralizados (`toError` e `getErrorMessage`) e evitar casts inseguros.
 
 ### 3.4. Classificação Sindical (dimensão cadastral)
 - O campo canônico `situacao_sindical` deve ser tratado como dimensão separada de `situacao` (funcional) e `estado_cadastro`.
@@ -37,6 +40,11 @@ O **Canon de Paridade** é o conjunto de regras mandatórias que garantem a cons
 
 ### 3.3. Permissões
 - O `roles.config.js` é o árbitro final. Se um botão é exibido no Site para um perfil X, ele deve ser exibido no App para o mesmo perfil X.
+- O perímetro de autorização permanece fechado: `perfil_acesso` e `situacao_sindical` são dimensões canônicas obrigatórias para decisões de acesso.
+
+### 3.5. Política de tipagem e adapters locais
+- Não introduzir `@ts-ignore`, nem flexibilizar `tsconfig`.
+- Em divergências de payload entre API e UI, usar **adapters locais mínimos** no frontend (sem alterar contrato backend), com normalização explícita e sem `any` oportunista.
 
 ## 4. Governança
 Qualquer PULL REQUEST que adicione uma funcionalidade a apenas uma das plataformas sem uma justificativa técnica aceitável (ex: recurso experimental ou específico de hardware) será reprovado sob o **Parity Mode**.

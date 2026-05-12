@@ -8,7 +8,8 @@ Este documento define o estado "CANON" (fonte única de verdade) do repositório
 ### 1.2. O que está incluído
 - **Núcleo de Gestão de Filiados:** Cadastro, edição, arquivamento e auditoria.
 - **Área do Filiado (Meus Dados):** Autenticação, atualização de perfil, dependentes e 2FA.
-- **Módulos Satélites:** Publicações (Drive), Ressarcimento de Despesas, Jogos 2026 e Notícias Internas (CMS).
+- **Módulos Satélites:** Publicações (Drive), Ressarcimento de Despesas e Notícias Internas (CMS).
+- **Histórico:** o módulo **Jogos 2026** foi descontinuado no ciclo de estabilização de Maio/2026 (mantido apenas como referência histórica documental).
 - **Camada Shared:** Formatters e utilitários compartilhados entre Web e Mobile.
 
 ### 1.3. Fora de Escopo
@@ -33,7 +34,6 @@ A hierarquia de decisão em caso de divergência ou conflito técnico é absolut
     *   `filiados.controller.js`: Gestão de perfil e administração de filiados.
     *   `publicacoes.controller.js`: Integração com Drive.
     *   `ressarcimento.controller.js`: Processamento de pedidos (PDF + Email).
-    *   `jogos.controller.js`: Inscrições e cancelamentos dos Jogos 2026.
 *   **`src/services/`**: Lógica de negócio e persistência.
     *   `filiados.service.js`: **CRÍTICO.** Contém lógica de compactação de dependentes (`dep1..dep5`), normalização de CPF e regras de arquivamento.
     *   `drive.service.js`: Abstração da API Google Drive.
@@ -46,7 +46,6 @@ A hierarquia de decisão em caso de divergência ou conflito técnico é absolut
 *   **`public/js/area-filiado/`**: Lógica frontend por módulo.
     *   `meus-dados.js`: Gerenciamento de perfil e dependentes (Web).
     *   `filiados-admin.js`: Painel de gestão (Admin).
-    *   `jogos.js`: Formulário de inscrição Jogos 2026.
 *   **`public/js/shared/`**:
     *   `format/formatters.js`: **CANON de máscaras Web.** Expõe `window.Formatters`.
 *   **`public/css/style.css`**: Design system consolidado.
@@ -193,7 +192,6 @@ Todo PR ou alteração deve validar:
 Os seguintes componentes estão estáveis e não devem ser modificados sem aprovação excepcional:
 - **Lógica de Auditoria:** Gravação em `filiados_eventos` dentro de blocos try/catch.
 - **Biometria (Mobile):** O token JWT deve ser armazenado exclusivamente via `expo-secure-store` para permitir a restauração segura da sessão via biometria sem nova coleta de senha.
-- **Compensação de Idade:** Regra dos Jogos 2026 (`2026 - ano_nascimento`).
 - **Layout de Cards:** Padrão de cores e centralização de títulos (`.res-header`, `.res-card h3`).
 - **CEP Lookup:** Preenchimento automático de campos de endereço (logradouro, bairro, cidade, UF).
 

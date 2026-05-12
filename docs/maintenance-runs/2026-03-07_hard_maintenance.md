@@ -38,7 +38,7 @@
 - `site/public/estatuto.html`: Nova estrutura de navegação lateral.
 - `site/public/diretoria.html`: Padronização de cards.
 - `site/public/contato.html`: Correção de overflow nos botões.
-- `docs/parity-matrix.md`: Atualização do status de paridade do Estatuto.
+- `docs/paridade-app-site.md`: Atualização do status de paridade do Estatuto.
 
 ## C. Estratégia de Reaproveitamento (Estatuto)
 A lógica de geração do Sumário (TOC) foi centralizada no arquivo `site/public/js/area-filiado/estatuto.js`. Através da exportação de `montarToc`, a área externa agora consome exatamente o mesmo código que a área logada, garantindo que qualquer mudança futura na estrutura do documento (tags H2, H3, etc) seja refletida automaticamente em ambos os ambientes sem necessidade de manutenção dupla.
