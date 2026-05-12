@@ -23,6 +23,7 @@ import { getCanonicalFiliadoId } from '../utils/filiadoUtils';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import SafeScreen from '../components/SafeScreen';
 import api from '../services/apiService';
+import { getErrorMessage, toError } from '../infra/errorUtils';
 
 const parsePtNumber = (input: string): number => {
   if (!input) return 0;
@@ -30,6 +31,8 @@ const parsePtNumber = (input: string): number => {
   const num = Number(normalized);
   return isNaN(num) ? 0 : num;
 };
+
+const asString = (value: unknown): string => (typeof value === 'string' ? value : '');
 
 const BANCOS_LISTA = [
   { code: "001", name: "Banco do Brasil" },
@@ -43,6 +46,12 @@ const BANCOS_LISTA = [
   { code: "041", name: "Banrisul" },
   { code: "021", name: "Banestes" }
 ];
+type FormState = {
+  nome_solicitante: string; cpf: string; email_destino: string; telefone_contato: string;
+  data_inicio: string; data_fim: string; local: string; descricao: string; diarias: string;
+  valor_diarias: string; km_total: string; valor_km: string; valor_outros: string; valor_total: string;
+  banco_select: string; banco_outro: string; banco: string; agencia: string; conta: string; pix: string;
+};
 
 const RessarcimentoScreen = () => {
   const { usuario } = useAuth();
@@ -50,11 +59,11 @@ const RessarcimentoScreen = () => {
   const [loading, setLoading] = useState(false);
   const [fetchingUser, setFetchingUser] = useState(false);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     nome_solicitante: usuario?.nome || '',
     cpf: usuario?.cpf || '',
-    email_destino: usuario?.email1 || usuario?.email2 || '',
-    telefone_contato: usuario?.telefone1 || usuario?.telefone2 || '',
+    email_destino: asString(usuario?.email1) || asString(usuario?.email2) || '',
+    telefone_contato: asString(usuario?.telefone1) || asString(usuario?.telefone2) || '',
     data_inicio: '',
     data_fim: '',
     local: '',
@@ -73,7 +82,8 @@ const RessarcimentoScreen = () => {
     pix: '',
   });
 
-  const [anexos, setAnexos] = useState<any[]>([]);
+  type Anexo = { uri: string; name?: string; mimeType?: string; type?: string | null };
+  const [anexos, setAnexos] = useState<Anexo[]>([]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -83,14 +93,14 @@ const RessarcimentoScreen = () => {
         if (data) {
           setForm(prev => ({
             ...prev,
-            nome_solicitante: data.nome || prev.nome_solicitante,
-            cpf: data.cpf || prev.cpf,
-            email_destino: data.email1 || data.email2 || prev.email_destino,
-            telefone_contato: data.telefone1 || data.telefone2 || prev.telefone_contato,
+            nome_solicitante: asString(data.nome) || prev.nome_solicitante,
+            cpf: asString(data.cpf) || prev.cpf,
+            email_destino: asString(data.email1) || asString(data.email2) || prev.email_destino,
+            telefone_contato: asString(data.telefone1) || asString(data.telefone2) || prev.telefone_contato,
           }));
         }
-      } catch (err) {
-        logger.error('[Ressarcimento.fetchUser.error]', err);
+      } catch (err: unknown) {
+        logger.error('[Ressarcimento.fetchUser.error]', toError(err));
       } finally {
         setFetchingUser(false);
       }
@@ -98,7 +108,7 @@ const RessarcimentoScreen = () => {
     fetchUserData();
   }, []);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: keyof FormState, value: string) => {
     setForm((prev) => {
       let finalValue = value;
       if (field === 'telefone_contato') {
@@ -197,10 +207,15 @@ const RessarcimentoScreen = () => {
       });
 
       if (!result.canceled) {
-        setAnexos((prev) => [...prev, ...result.assets]);
+        const assets: Anexo[] = result.assets.map((asset) => ({
+          uri: asset.uri,
+          name: asset.name ?? undefined,
+          mimeType: asset.mimeType ?? undefined,
+        }));
+        setAnexos((prev) => [...prev, ...assets]);
       }
-    } catch (err) {
-      logger.error('[Ressarcimento.pickDocument.error]', err);
+    } catch (err: unknown) {
+      logger.error('[Ressarcimento.pickDocument.error]', toError(err));
     }
   };
 
@@ -232,7 +247,7 @@ const RessarcimentoScreen = () => {
         return `${y}-${m}-${d}`;
       };
 
-      const payload: any = {
+      const payload: Record<string, string> = {
         nome: form.nome_solicitante,
         cpf: onlyDigits(form.cpf),
         email_destino: form.email_destino,
@@ -263,7 +278,7 @@ const RessarcimentoScreen = () => {
         let fileType = anexo.mimeType || anexo.type;
 
         if (!fileType || fileType === 'success') {
-            const ext = fileName.split('.').pop().toLowerCase();
+            const ext = fileName?.split('.').pop()?.toLowerCase();
             if (ext === 'pdf') fileType = 'application/pdf';
             else if (ext === 'jpg' || ext === 'jpeg') fileType = 'image/jpeg';
             else if (ext === 'png') fileType = 'image/png';
@@ -272,7 +287,7 @@ const RessarcimentoScreen = () => {
 
         formData.append('anexos', {
           uri: fileUri,
-          name: fileName,
+          name: fileName || 'anexo',
           type: fileType,
         } as any);
       });
@@ -302,9 +317,9 @@ const RessarcimentoScreen = () => {
         pix: '',
       }));
       setAnexos([]);
-    } catch (err: any) {
-      logger.error('[Ressarcimento.submit.error]', err);
-      Alert.alert('Erro', err.response?.data?.error || 'Não foi possível enviar sua solicitação.');
+    } catch (err: unknown) {
+      logger.error('[Ressarcimento.submit.error]', toError(err));
+      Alert.alert('Erro', getErrorMessage(err, 'Não foi possível enviar sua solicitação.'));
     } finally {
       setLoading(false);
     }

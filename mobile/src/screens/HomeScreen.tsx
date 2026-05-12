@@ -37,7 +37,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Assembleias', subtitle: 'Votações e sessões', icon: 'vote-outline', screen: 'Votacao', hiddenForComunicador: true },
   { label: 'Publicações', subtitle: 'Biblioteca e Atos', icon: 'book-open-variant', screen: 'Publicacoes', hiddenForComunicador: true },
   { label: 'Repasse', subtitle: 'Apoio e alocações', icon: 'swap-horizontal', screen: 'Repasse', hiddenForComunicador: true },
-  { label: 'Jogos 2026', subtitle: 'Participantes e relatório', icon: 'trophy-outline', screen: 'Jogos2026', requireGestao: true, hiddenForComunicador: true },
   { label: 'Relatórios', subtitle: 'Dossiês e PDFs', icon: 'chart-bar', screen: 'Relatorios', requireGestao: true },
   { label: 'Estatísticas', subtitle: 'Acessos do site', icon: 'chart-line', screen: 'Estatisticas', requireGestao: true },
   { label: 'Consulta Processual', subtitle: 'PJe e Tribunais', icon: 'scale-balance', screen: 'ConsultaProcessual', hiddenForComunicador: true },

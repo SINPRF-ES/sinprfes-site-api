@@ -8,14 +8,19 @@ const SINDICATO_EAS_PROJECT_ID = 'c589a042-895e-497e-a61f-a76216580a35';
  * Prioriza Constants.easConfig e depois Constants.expoConfig?.extra?.eas.
  */
 export function getExpoProjectId(): string | undefined {
-  const easProjectId =
-    Constants.expoConfig?.extra?.eas?.projectId ||
-    (Constants.easConfig as any)?.projectId;
+  const easProjectIdFromExtra = Constants.expoConfig?.extra?.eas?.projectId;
+  const easProjectIdFromConfig =
+    typeof Constants.easConfig === 'object' && Constants.easConfig && 'projectId' in Constants.easConfig
+      ? (Constants.easConfig as { projectId?: string }).projectId
+      : undefined;
+  const easProjectId = easProjectIdFromExtra || easProjectIdFromConfig;
 
   if (!easProjectId) {
-    logger.error('Push info: ID do projeto Expo não encontrado na configuração. Usando fallback hard-coded para evitar token sem projectId.', {
-      fallbackProjectId: SINDICATO_EAS_PROJECT_ID,
-    });
+    logger.error(
+      'Push info: ID do projeto Expo não encontrado na configuração. Usando fallback hard-coded para evitar token sem projectId.',
+      new Error('EAS projectId ausente na configuração Expo'),
+      { fallbackProjectId: SINDICATO_EAS_PROJECT_ID }
+    );
     return SINDICATO_EAS_PROJECT_ID;
   }
 

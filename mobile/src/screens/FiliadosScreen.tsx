@@ -36,7 +36,7 @@ export default function FiliadosScreen({ navigation, route }: any) {
       if (!isRefresh) setLoading(true);
       else setRefreshing(true);
 
-      const params: any = {};
+      const params: Record<string, string> = {};
       if (filtroCadastro !== 'CADASTRO_ATIVO' && ehGestao) {
         params.incluirArquivados = '1';
       }
@@ -45,13 +45,15 @@ export default function FiliadosScreen({ navigation, route }: any) {
 
       // Otimização: Pre-calcula campos de busca para evitar normalização repetida no filter (Bolt ⚡)
       const processedData = data.map((f: Filiado) => {
-        const item = ehGestao ? f : {
-          id: f.id,
-          nome: f.nome,
-          telefone1: f.telefone1,
-          avatar_url: f.avatar_url,
-          lotacao: f.lotacao,
-          situacao: f.situacao,
+        const item: Filiado = ehGestao ? f : {
+          ...f,
+          cpf: f.cpf || '',
+          perfil_acesso: f.perfil_acesso || 'FILIADO',
+          email1: f.email1 || '',
+          telefone1: f.telefone1 || '',
+          avatar_url: f.avatar_url ?? null,
+          lotacao: f.lotacao ?? null,
+          situacao: f.situacao || 'ATIVO',
           situacao_funcional: f.situacao_funcional,
         };
 
@@ -149,7 +151,7 @@ export default function FiliadosScreen({ navigation, route }: any) {
   const renderItem = useCallback(({ item }: { item: Filiado }) => (
     <FiliadoCard
       filiado={item}
-      currentUserProfile={usuario?.perfil_acesso as any}
+      currentUserProfile={Canon.normalizePerfil(usuario?.perfil_acesso || Canon.PERFIL_ACESSO.FILIADO)}
       onEdit={handleEdit}
     />
   ), [usuario?.perfil_acesso, handleEdit]);
