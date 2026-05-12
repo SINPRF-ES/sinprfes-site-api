@@ -9,13 +9,20 @@ const FILIADOS_ENDPOINT = `${API_BASE_URL}/api/filiados`;
 // Ajuste se sua rota real for diferente (ex.: /api/restrito/filiados)
 
 interface FiliadoApi {
-  id: number;
-  nome: string;
+  id: number | string;
+  nome?: string | null;
   cpf?: string | null;
   telefone?: string | null;
+  telefone1?: string | null;
   email?: string | null;
+  email1?: string | null;
+  perfil_acesso?: string | null;
   situacao?: string | null;
-  // se sua API tiver mais campos (matrícula, lotação etc.), adicionamos depois
+  atualizado_em?: string | null;
+}
+
+function asNullableString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
 }
 
 // Busca lista de filiados na API
@@ -33,18 +40,23 @@ export async function fetchFiliadosFromApi(token: string): Promise<Filiado[]> {
       throw new Error(`Erro ao buscar filiados: ${resp.status} - ${text}`);
     }
 
-    const data: FiliadoApi[] = await resp.json();
+    const data = await resp.json() as FiliadoApi[];
 
   // Mapeia a resposta da API para o tipo Filiado usado no app/banco
-  const lista: Filiado[] = data.map((item) => ({
-    id: item.id,
-    nome: item.nome,
-    cpf: item.cpf ?? null,
-    telefone: item.telefone ?? null,
-    email: item.email ?? null,
-    situacao: item.situacao ?? null,
-    atualizado_em: new Date().toISOString(),
-  }));
+    const lista: Filiado[] = data.map((item) => {
+      const telefone = asNullableString(item.telefone1 ?? item.telefone) ?? '';
+      const email = asNullableString(item.email1 ?? item.email) ?? '';
+      return {
+        id: String(item.id),
+        nome: asNullableString(item.nome) ?? '',
+        cpf: asNullableString(item.cpf) ?? '',
+        perfil_acesso: asNullableString(item.perfil_acesso) ?? 'FILIADO',
+        situacao: asNullableString(item.situacao) ?? 'ATIVO',
+        telefone1: telefone,
+        email1: email,
+        atualizado_em: asNullableString(item.atualizado_em) ?? new Date().toISOString(),
+      };
+    });
 
     return lista;
   } catch (err) {

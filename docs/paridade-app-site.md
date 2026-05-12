@@ -29,7 +29,6 @@ As seções abaixo seguem a ordem de exibição e o agrupamento visual (com core
 | **Ressarcimento** | Solicitação de reembolsos e auxílios | Todos |
 | **Assembleias** | Votações em tempo real e histórico | Membros (exceto Comunicador) |
 | **Enquetes** | Consultas rápidas de opinião | Membros (exceto Comunicador) |
-| **Jogos 2026** | Inscrições e informações do evento | Membros (exceto Comunicador) |
 | **Repasse** | Apoio e alocações de recursos | Todos (Edição restrita à Gestão) |
 
 ### 🛠️ Seção III: Gestão
@@ -58,6 +57,11 @@ As seções abaixo seguem a ordem de exibição e o agrupamento visual (com core
   - Os itens de gestão renderizados no Drawer (ex.: **Notificações**, **Novo Filiado**, **Diagnóstico**) exibem estado ativo corretamente.
 
 ## 3. Histórico de Sincronização e Manutenção
+
+### [2026-05] Descontinuação do módulo Jogos 2026
+- O módulo foi aposentado do fluxo ativo em app/site.
+- Removidos: rotas, telas, banners, serviços, persistência SQLite offline e integrações `/api/jogos`.
+- Esta remoção não altera regras de negócio dos demais domínios.
 
 ### [2026-05-08] Sincronização de Lógica Canônica (Guardian Soft)
 - **Localização**: `normalizeLotacao` no App sincronizado com o Backend. Removidos fallbacks indevidos ('SEDE', 'NENHUMA') para garantir que apenas o Backend defina valores padrão ou nulos.

@@ -55,6 +55,10 @@ export interface Votacao {
   encerra_em?: string;
   contagem?: VotoContagem;
   votos?: VotoNominal[];
+  user_eligibility?: {
+    elegivel: boolean;
+    motivo?: string;
+  };
   criado_em: string;
 }
 

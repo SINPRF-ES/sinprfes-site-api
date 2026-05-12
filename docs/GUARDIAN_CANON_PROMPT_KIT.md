@@ -136,7 +136,7 @@ platform leakage
 
 PARITY CHECK
 
-Compare system behavior with docs/parity-matrix.md.
+Compare system behavior with docs/paridade-app-site.md.
 
 Classify drift severity:
 
@@ -285,7 +285,7 @@ HARD MODE STARTUP
 Ensure these files exist:
 
 docs/PARITY_CANON.md
-docs/parity-matrix.md
+docs/paridade-app-site.md
 .Jules/sentinel.md
 .Jules/bolt.md
 .Jules/palette.md
@@ -388,7 +388,7 @@ permissions
 error handling
 state behavior
 
-Update docs/parity-matrix.md.
+Update docs/paridade-app-site.md.
 
 ---
 

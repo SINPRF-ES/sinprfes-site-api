@@ -7,7 +7,7 @@ Este documento mapeia o estado atual do aplicativo mobile em relação às verda
 ### 1.1 Perfis de Acesso
 - **FILIADO:** Acesso restrito aos próprios dados. Na listagem geral, não deve ver arquivados nem CPF/Data de Nascimento de outros.
 - **GESTÃO (ADMIN, DIRETORIA, FUNCIONARIO):** Acesso total. Pode listar ativos/arquivados, editar terceiros e gerenciar dependentes.
-- **ORGANIZADOR:** Perfil específico para o módulo de Jogos. Na listagem de filiados, comporta-se como GESTÃO para visualização, mas com foco operacional.
+- **ORGANIZADOR:** Perfil legado mantido por compatibilidade histórica/RBAC; não há módulo ativo de Jogos no app.
 
 ### 1.2 Situação Funcional
 - Valores: `ATIVO`, `VETERANO`, `PENSIONISTA`.
@@ -35,8 +35,9 @@ Este documento mapeia o estado atual do aplicativo mobile em relação às verda
 | **Publicações** | UX Sem Datas + Sort Alfa | ✅ Concluído | Espelha comportamento do site. |
 | **Publicações** | Share Native PDF | ✅ Concluído | Integrado com `react-native-pdf`. |
 | **Ressarcimento** | Paridade Completa | ✅ Concluído | Suporte multi-anexo (PDF/IMG). |
-| **Jogos 2026** | Inscrição + Gestão | ✅ Concluído | Table scrollable + Idade (2026-ano). |
 | **🗨️ Enquetes** | Listagem + votação + resultados para filiados; criação para gestão | ✅ Concluído | Data limite por dia, opções dinâmicas (mín. 2), regra única para site/app. |
+
+> **Nota (Maio/2026):** o módulo **Jogos 2026** foi descontinuado do app (rotas/telas/banners/serviços/offline).
 
 ## 3. Regras de Interface (Visual Parity)
 - **Meus Dados / Edição:**

@@ -2,12 +2,14 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
+import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { isGestao as checkIsGestao, isDiretoria as checkIsDiretoria } from '../utils/filiadoUtils';
 import { EMOJI } from '../constants/emojis';
 import DrawerItemLabel from '../components/DrawerItemLabel';
 import { COLORS } from '../theme/colors';
+import type { DrawerParamList } from './types';
 
 const SECTION_META = {
   principal: { title: 'Área do Filiado', emoji: '🏠', backgroundColor: 'rgba(255, 255, 255, 0.85)' },
@@ -29,7 +31,6 @@ const NAV_STRUCTURE = [
   { key: 'ressarcimento', routeName: 'Ressarcimento', label: 'Ressarcimento', emoji: EMOJI.RESSARCIMENTO, section: 'servicos', order: 100 },
   { key: 'assembleias', routeName: 'Votacao', label: 'Assembleias e Votações', emoji: EMOJI.ASSEMBLEIA, section: 'servicos', order: 110 },
   { key: 'enquetes', routeName: 'Enquetes', label: 'Enquetes', emoji: EMOJI.ENQUETES, section: 'servicos', order: 120 },
-  { key: 'jogos', routeName: 'Jogos2026', label: 'Jogos 2026', emoji: EMOJI.JOGOS, section: 'servicos', order: 130 },
   { key: 'repasse', routeName: 'Repasse', label: 'Repasse', emoji: EMOJI.REPASSE, section: 'servicos', order: 140 },
   { key: 'consulta-processual', routeName: 'ConsultaProcessual', label: 'Consulta Processual', emoji: EMOJI.CONSULTA_PROCESSUAL, section: 'gestao', order: 150 },
   { key: 'estatisticas', routeName: 'Estatisticas', label: 'Estatísticas', emoji: EMOJI.ESTATISTICAS, section: 'gestao', order: 160 },
@@ -59,13 +60,17 @@ function maskTelefone(tel: string) {
   return tel;
 }
 
-const CustomDrawerContent = (props) => {
+function asText(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+const CustomDrawerContent = (props: DrawerContentComponentProps) => {
   const { usuario, logout, setBloqueadoPorBiometria } = useAuth();
   const insets = useSafeAreaInsets();
   const ehGestao = checkIsGestao(usuario?.perfil_acesso);
   const ehDiretoria = checkIsDiretoria(usuario?.perfil_acesso);
   const currentRouteName = props.state?.routes?.[props.state.index]?.name;
-  const routeSet = new Set((props.state?.routes || []).map((route) => route.name));
+  const routeSet = new Set((props.state?.routes || []).map((route: { name: string }) => route.name));
 
   const handleLogoutPress = () => {
     Alert.alert(
@@ -90,7 +95,6 @@ const CustomDrawerContent = (props) => {
     .filter((item) => routeSet.has(item.routeName))
     .filter((item) => {
       if (item.routeName === 'NotificacoesPush' || item.routeName === 'CriarFiliado') return ehGestao;
-      if (item.routeName === 'Jogos2026') return ehGestao;
       if (item.routeName === 'Logs') return ehDiretoria;
       return true;
     })
@@ -101,47 +105,63 @@ const CustomDrawerContent = (props) => {
       return acc;
     }, {} as Record<string, Array<typeof NAV_STRUCTURE[number]>>);
 
+  if (!usuario) {
+    return (
+      <DrawerContentScrollView {...props} contentContainerStyle={styles.drawerContent}>
+        <View style={[styles.container, { paddingTop: insets.top + 12 }]} />
+      </DrawerContentScrollView>
+    );
+  }
+  const avatarUrl = asText(usuario.avatar_url) || asText(usuario.fotoUrl);
+  const nome = asText(usuario.nome);
+  const perfilAcesso = asText(usuario.perfil_acesso);
+  const situacaoFuncional = asText(usuario.situacao_funcional);
+  const situacao = asText(usuario.situacao);
+  const telefone1 = asText(usuario.telefone1);
+  const dataNascimento = asText(usuario.data_nascimento);
+  const lotacao = asText(usuario.lotacao);
+
   return (
     <DrawerContentScrollView {...props} contentContainerStyle={styles.drawerContent}>
       <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
         <View style={styles.drawerHeader}>
           <Image
-            source={usuario.avatar_url ? { uri: usuario.avatar_url } : (usuario.fotoUrl ? { uri: usuario.fotoUrl } : require('../../assets/logo.png'))}
+            source={avatarUrl ? { uri: avatarUrl } : require('../../assets/logo.png')}
             style={styles.avatar}
           />
 
           <View style={styles.userInfo}>
             <Text style={styles.nome} numberOfLines={2}>
-              {usuario.nome}
+              {nome}
             </Text>
 
-            {usuario.perfil_acesso && (
+            {perfilAcesso && (
               <Text style={[styles.subInfo, styles.perfil]}>
-                {String(usuario.perfil_acesso).toUpperCase()}
+                {perfilAcesso.toUpperCase()}
               </Text>
             )}
 
-            {(usuario.situacao_funcional || usuario.situacao) && (
+            {(situacaoFuncional || situacao) && (
               <Text style={styles.subInfo}>
-                ⚖️ {String(usuario.situacao_funcional || usuario.situacao).toUpperCase()}
+                ⚖️ {(situacaoFuncional || situacao).toUpperCase()}
               </Text>
             )}
 
-            {usuario.telefone1 && (
+            {telefone1 && (
               <Text style={styles.subInfo}>
-                📞 {maskTelefone(usuario.telefone1)}
+                📞 {maskTelefone(telefone1)}
               </Text>
             )}
 
-            {usuario.data_nascimento && (
+            {dataNascimento && (
               <Text style={styles.subInfo}>
-                🎂 {formatarData(usuario.data_nascimento)}
+                🎂 {formatarData(dataNascimento)}
               </Text>
             )}
 
-            {usuario.lotacao && (
+            {lotacao && (
               <Text style={styles.subInfo}>
-                📍 {usuario.lotacao}
+                📍 {lotacao}
               </Text>
             )}
           </View>
@@ -168,7 +188,7 @@ const CustomDrawerContent = (props) => {
                     inactiveTintColor={COLORS.text}
                     activeBackgroundColor="rgba(0, 51, 102, 0.12)"
                     label={(labelProps) => <DrawerItemLabel emoji={item.emoji} label={item.label} {...labelProps} />}
-                    onPress={() => props.navigation.navigate(item.routeName as never)}
+                    onPress={() => props.navigation.navigate(item.routeName as keyof DrawerParamList)}
                   />
                 );
               })}

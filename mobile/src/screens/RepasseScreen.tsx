@@ -24,6 +24,19 @@ import { formatCentavosBRL, sanitizeToCentavos } from '../shared/format/formatte
 const MIN_YEAR = 2026;
 const AUTO_POLL_INTERVAL_MS = 30000;
 
+type RepasseResumoLike = RepasseResumo & {
+  totalNaoAlocado?: number;
+  alocacoes?: Array<{ eventoId: number; valorAlocado: number }>;
+};
+
+type RepasseEventoLike = RepasseEvento & {
+  valor_total_alocado?: number;
+};
+
+type RepasseMovimentoLike = RepasseMovimento & {
+  updated_at?: string;
+};
+
 export default function RepasseScreen() {
   const { usuario } = useAuth();
   const ehGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes((usuario?.perfil_acesso || '').toUpperCase());
@@ -121,17 +134,17 @@ export default function RepasseScreen() {
     }
   }, [ehGestao, allResponsaveisCache]);
 
-  const makeResumoSignature = (value: RepasseResumo | null) => {
+  const makeResumoSignature = (value: RepasseResumoLike | null) => {
     if (!value) return '';
     return JSON.stringify({
       totalNaoAlocado: value.totalNaoAlocado,
       lotacoes: (value.apoioPorLotacao || []).map((r) => [r.lotacao, r.qtdAtivos, r.creditoApoioOperacional, r.debitosApoioOperacional, r.saldoApoioOperacional]),
-      alocacoes: (value.alocacoes || []).map((a) => [a.eventoId, a.valorAlocado]),
+      alocacoes: (value.alocacoes || []).map((a: { eventoId: number; valorAlocado: number }) => [a.eventoId, a.valorAlocado]),
     });
   };
 
-  const makeEventosSignature = (value: RepasseEvento[]) => JSON.stringify((value || []).map((e) => [e.id, e.titulo, e.status, e.valor_total_alocado]));
-  const makeMovimentosSignature = (value: RepasseMovimento[]) => JSON.stringify((value || []).map((m) => [m.id, m.updated_at || m.created_at, m.valor_centavos ?? m.valorCentavos ?? m.valor, m.observacao]));
+  const makeEventosSignature = (value: RepasseEventoLike[]) => JSON.stringify((value || []).map((e) => [e.id, e.titulo, e.status, e.valor_total_alocado]));
+  const makeMovimentosSignature = (value: RepasseMovimentoLike[]) => JSON.stringify((value || []).map((m) => [m.id, m.updated_at || m.created_at, m.valor_centavos ?? m.valorCentavos ?? m.valor, m.observacao]));
 
   const loadData = useCallback(async (showLoading = true) => {
     if (isFetchingRef.current) return;
@@ -483,11 +496,11 @@ export default function RepasseScreen() {
                       onChangeText={setQueryResp}
                     />
                     <PickerSafe
-                      selectedValue={eventoForm.responsavel_filiado_id}
+                      selectedValue={eventoForm.responsavel_filiado_id ?? undefined}
                       onValueChange={(v) => setEventoForm((p) => ({ ...p, responsavel_filiado_id: v as number | null }))}
                       mode="dropdown"
                       items={[
-                        { label: 'Selecione...', value: null },
+                          { label: 'Selecione...', value: undefined },
                         ...responsaveis.map((r) => ({
                           label: `${r.nome} (${formatSituacaoLabel(r.situacao)})`,
                           value: r.id,

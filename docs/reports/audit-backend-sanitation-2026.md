@@ -9,6 +9,7 @@
 
 ## 1. Isolamento do Teste TRF1
 *   **Ação:** Renomeação de `trf1PublicaProvider.test.js` para `trf1PublicaProvider.manual.js`.
+*   **Operação atual:** Execução manual via script `test:manual` no `backend/package.json`.
 *   **Verificação:** Confirmado via `jest --listTests` que o arquivo é ignorado no ciclo padrão.
 *   **Análise:** O isolamento é efetivo para prevenir OOM no CI. O arquivo contém nota técnica clara sobre a causa raiz e o plano de remediação.
 *   **Impacto de Cobertura:** Existe uma redução na cobertura automatizada do scraper TRF1, mas o módulo funcional permanece inalterado e protegido por logs de erro em produção.
@@ -55,4 +56,4 @@
 ### Opcionais (Ciclos Futuros)
 1.  **Issue de Débito Técnico:** Criar card para reescrever `trf1PublicaProvider.manual.js` usando `nock` ou mocks de rede do Playwright para evitar loops de espera reais.
 2.  **Refatoração de Mocks:** Centralizar a criação do objeto `user` de teste em um helper para garantir que futuras novas flags canônicas sejam propagadas para todos os testes simultaneamente.
-3.  **Script de Teste Manual:** Adicionar `"test:manual": "jest --testMatch='**/*.manual.js'"` ao `package.json` para facilitar a execução periódica do scraper.
+3.  **Script de Teste Manual:** ✅ Concluído — `"test:manual": "jest --testMatch='**/*.manual.js'"` disponível para execução periódica do scraper.

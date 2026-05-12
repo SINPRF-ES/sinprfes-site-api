@@ -4,11 +4,13 @@ import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import SafeScreen from '../components/SafeScreen';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { solicitarResetSenha } from '../services/authService';
 import { formatCpf, onlyDigits } from '../shared/format/formatters';
+import type { RootStackParamList } from '../navigation';
 
 export default function ForgotPasswordScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [cpf, setCpf] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -24,7 +26,7 @@ export default function ForgotPasswordScreen() {
       Alert.alert(
         'Solicitação Enviada',
         'Se o CPF estiver cadastrado, você receberá um e-mail com instruções.',
-        [{ text: 'OK', onPress: () => navigation.navigate('Login' as any) }]
+        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
       );
     } catch (error: any) {
       Alert.alert('Erro', error.response?.data?.error || 'Não foi possível processar sua solicitação.');
@@ -67,7 +69,7 @@ export default function ForgotPasswordScreen() {
         <View style={{ height: 16 }} />
         <Button
           title="Voltar para login"
-          onPress={() => navigation.navigate('Login' as any)}
+          onPress={() => navigation.navigate('Login')}
           disabled={loading}
           color="#666"
         />

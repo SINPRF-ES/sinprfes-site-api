@@ -14,7 +14,7 @@ A documentação completa do projeto foi organizada e centralizada no diretório
 - [**Operações (Ops)**](./docs/ops/): Guias operacionais (deploy, Railway, Cloudflare, DNS, etc.).
 - [**Runbooks**](./docs/runbooks/): Passo-a-passo executável (OTA, homologação, etc.).
 - [**Paridade (Canon)**](./docs/PARITY_CANON.md): Regras oficiais de sincronização entre plataformas.
-- [**Matriz de Paridade**](./docs/parity-matrix.md): Status real de paridade App vs Site.
+- [**Matriz de Paridade**](./docs/paridade-app-site.md): Status real de paridade App vs Site.
 - [**OTA Runbook Oficial**](./docs/runbooks/ota-update.md): Único guia oficial para atualizações Over-the-Air.
 - [**Guia de Migrations SQL**](./backend/scripts/migrations/README.md): Padrão de organização e execução das migrations.
 
@@ -42,6 +42,17 @@ Com isso, o cadastro administrativo já contempla cenários de **não filiado** 
 - Todas as regras de negócio, permissões, validações e normalizações finais **residem no backend**.
 - O frontend web e o app mobile **consomem a mesma API** e devem exibir/operar com **os mesmos conceitos e resultados**.
 - Web e Mobile podem aplicar máscaras apenas por **experiência do usuário (UX)**, mas a validação final e a persistência sanitizada são do backend.
+
+---
+
+## ✅ Estado atual de qualidade técnica (Maio/2026)
+
+- **Backend estabilizado:** `45/45` suítes e `241/241` testes verdes.
+- **TRF1:** teste de provider movido para execução manual (`trf1PublicaProvider.manual.js`) por risco isolado de OOM em automação; execução via script `test:manual` no backend.
+- **Mobile estabilizado:** testes verdes e `pnpm --filter @sinprfes/mobile exec tsc --noEmit` 100% verde.
+- **Tipagem e erros:** política de tipagem estrita mantida (sem flexibilização de TS, sem `@ts-ignore` novo) e uso padronizado de `toError` / `getErrorMessage`.
+- **Paridade e RBAC:** backend permanece SSOT com perímetro fechado de autorização (`perfil_acesso` + `situacao_sindical`) preservado.
+- **Jogos 2026:** módulo aposentado no app/site (rotas, telas, banners, serviços, SQLite offline e integrações `/api/jogos` removidos de fluxo ativo).
 
 ---
 

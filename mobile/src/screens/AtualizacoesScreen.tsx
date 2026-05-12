@@ -8,6 +8,7 @@ import * as Updates from 'expo-updates';
 import Constants from 'expo-constants';
 import { FontAwesome } from '@expo/vector-icons';
 import { logDebug } from '../utils/filiadoUtils';
+import { getErrorMessage } from '../infra/errorUtils';
 
 const AtualizacoesScreen = () => {
     const [isChecking, setIsChecking] = useState(false);
@@ -16,7 +17,8 @@ const AtualizacoesScreen = () => {
     const [isApplying, setIsApplying] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string>('');
 
-    const isOTAIncompatible = updateResult?.type === 'APK' && updateResult.manifest?.runtimeVersion !== Updates.runtimeVersion;
+    const manifest = updateResult?.manifest;
+    const isOTAIncompatible = updateResult?.type === 'APK' && manifest?.runtimeVersion !== Updates.runtimeVersion;
 
     const versionCode = Application.nativeBuildVersion;
     const versionName = Application.nativeApplicationVersion;
@@ -47,10 +49,10 @@ const AtualizacoesScreen = () => {
             } else {
                 setStatusMessage('Não foi possível verificar');
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             logDebug('Atualizacoes.check.error', error);
             setStatusMessage('Erro ao verificar');
-            Alert.alert('Erro', 'Falha ao verificar atualizações: ' + error.message);
+            Alert.alert('Erro', 'Falha ao verificar atualizações: ' + getErrorMessage(error, 'Erro desconhecido'));
         } finally {
             setIsChecking(false);
         }
@@ -68,8 +70,8 @@ const AtualizacoesScreen = () => {
                         setIsApplying(true);
                         try {
                             await applyOtaUpdate();
-                        } catch (error: any) {
-                            Alert.alert('Erro', 'Falha ao aplicar atualização: ' + error.message);
+                        } catch (error: unknown) {
+                            Alert.alert('Erro', 'Falha ao aplicar atualização: ' + getErrorMessage(error, 'Erro desconhecido'));
                             setIsApplying(false);
                         }
                     }
@@ -83,8 +85,8 @@ const AtualizacoesScreen = () => {
             setIsApplying(true);
             try {
                 await downloadAndInstallApk(updateResult.apkFileId, updateResult.apkFileName);
-            } catch (error: any) {
-                Alert.alert('Erro no Download', error.message);
+            } catch (error: unknown) {
+                Alert.alert('Erro no Download', getErrorMessage(error, 'Erro desconhecido'));
             } finally {
                 setIsApplying(false);
             }
@@ -173,7 +175,7 @@ const AtualizacoesScreen = () => {
                             </Text>
                         </View>
 
-                        <Text style={styles.resultVersion}>Nova versão: {updateResult.manifest.versionName}</Text>
+                        <Text style={styles.resultVersion}>Nova versão: {manifest?.versionName || 'N/A'}</Text>
                         {updateResult.type === 'APK' && (
                             <View style={styles.apkInfoBox}>
                                 <Text style={styles.apkInfoText}>ABI detectada: {updateResult.apkAbi}</Text>
@@ -182,7 +184,7 @@ const AtualizacoesScreen = () => {
                         )}
                         <Text style={styles.resultNotesTitle}>O que mudou:</Text>
                         <Text style={styles.resultNotes}>
-                            {updateResult.type === 'OTA' ? updateResult.manifest.ota.notes : updateResult.manifest.apk.notes}
+                            {updateResult.type === 'OTA' ? (manifest?.ota?.notes || '') : (manifest?.apk?.notes || '')}
                         </Text>
 
                         {updateResult.isMandatory && (
