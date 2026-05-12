@@ -12,7 +12,18 @@ import CriarItemVotacaoScreen from '../screens/assembleia/CriarItemVotacaoScreen
 import ComporMesaScreen from '../screens/assembleia/ComporMesaScreen';
 import PublicacoesScreen from '../screens/PublicacoesScreen';
 
-const Stack = createNativeStackNavigator();
+export type AssembleiaStackParamList = {
+  AssembleiaList: undefined;
+  AssembleiaDetalhe: { id: string };
+  AssembleiaSala: { id: string };
+  CriarAssembleia: undefined;
+  Propostas: { assembleiaId: string };
+  CriarItemVotacao: { assembleiaId: string };
+  ComporMesa: { assembleiaId: string };
+  PublicacoesPicker: undefined;
+};
+
+const Stack = createNativeStackNavigator<AssembleiaStackParamList>();
 
 export default function AssembleiaStack() {
   return (
