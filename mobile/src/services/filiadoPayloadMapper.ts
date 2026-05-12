@@ -17,6 +17,7 @@ export const buildUpdateFiliadoPayload = (
   perfilAtor: string = 'FILIADO'
 ): Partial<Filiado> => {
   const payload: Partial<Filiado> = {};
+  const toUndefined = <T>(value: T | null | undefined): T | undefined => value ?? undefined;
 
   // Whitelist baseada no perfil
   const isGestao = ['ADMIN', 'DIRETORIA', 'FUNCIONARIO'].includes(perfilAtor.toUpperCase());
@@ -29,10 +30,10 @@ export const buildUpdateFiliadoPayload = (
   if (formState.email1) payload.email1 = formState.email1;
   if (formState.email2) payload.email2 = formState.email2;
   if (formState.data_nascimento) payload.data_nascimento = toIsoDateYYYYMMDD(formState.data_nascimento) || formState.data_nascimento;
-  if (formState.nome) payload.nome = normalizeNome(formState.nome);
-  if (formState.sexo !== undefined) payload.sexo = formState.sexo || null;
+  if (formState.nome) payload.nome = toUndefined(normalizeNome(formState.nome));
+  if (formState.sexo !== undefined) payload.sexo = toUndefined(formState.sexo || undefined);
   if (formState.cpf) payload.cpf = onlyDigits(formState.cpf);
-  if (formState.siape !== undefined) payload.siape = onlyDigits(formState.siape || '').slice(0, 7) || null;
+  if (formState.siape !== undefined) payload.siape = toUndefined(onlyDigits(formState.siape || '').slice(0, 7) || undefined);
   if (formState.lotacao) payload.lotacao = formState.lotacao;
   if (formState.situacao_funcional) payload.situacao = formState.situacao_funcional;
   if (formState.perfil_acesso) payload.perfil_acesso = formState.perfil_acesso;
