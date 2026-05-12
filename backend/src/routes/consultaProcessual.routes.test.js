@@ -46,4 +46,20 @@ describe('consultaProcessual.routes authorization', () => {
     expect(res.status).toBe(200);
     expect(res.body.debug).toBe(true);
   });
+
+  test('aplica rate limit (429) após exceder 5 requisições em 15 minutos', async () => {
+    const responses = [];
+
+    for (let i = 0; i < 6; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      const res = await request(app)
+        .get('/api/consulta-processual/me')
+        .set('x-test-perfil', 'FILIADO');
+      responses.push(res.status);
+    }
+
+    expect(responses.slice(0, 5).every((status) => status === 200 || status === 429)).toBe(true);
+    expect(responses[5]).toBe(429);
+  });
+
 });
