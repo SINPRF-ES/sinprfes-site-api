@@ -6,7 +6,7 @@ const { resourceIntensiveLimiter } = require('../middlewares/securityRateLimit')
 
 const router = express.Router();
 
-router.get('/me', auth, resourceIntensiveLimiter, controller.consultarMe);
-router.get('/debug/me', auth, requirePermission('EDIT_CONTENT'), resourceIntensiveLimiter, controller.consultarDebugMe);
+router.get('/me', resourceIntensiveLimiter, auth, controller.consultarMe);
+router.get('/debug/me', resourceIntensiveLimiter, auth, requirePermission('EDIT_CONTENT'), controller.consultarDebugMe);
 
 module.exports = router;

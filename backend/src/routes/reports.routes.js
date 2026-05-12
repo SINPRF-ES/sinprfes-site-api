@@ -8,17 +8,17 @@ const { resourceIntensiveLimiter } = require("../middlewares/securityRateLimit")
 
 router.post(
   "/generate",
+  resourceIntensiveLimiter,
   authMiddleware,
   requirePermission("RELATORIOS_VER"),
-  resourceIntensiveLimiter,
   reportsController.generateReport
 );
 
 router.post(
   "/preview",
+  resourceIntensiveLimiter,
   authMiddleware,
   requirePermission("RELATORIOS_VER"),
-  resourceIntensiveLimiter,
   reportsController.previewReport
 );
 
