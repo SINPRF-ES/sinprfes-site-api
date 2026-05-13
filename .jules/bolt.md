@@ -39,3 +39,7 @@
 ## 2026-03-09 - [Hierarchical Parallelization in Aggregated Reports]
 **Learning:** In complex reporting services, sequential "waterfalls" often hide within sub-functions. Parallelizing high-level functions (like `buscarDadosGlobal`) is only half the battle if their dependencies (like `buscarDadosAgregados`) still contain internal sequential loops. Converting sequential `for` loops that perform I/O into `Promise.all(map(...))` is the single most effective way to handle batch data fetching in Node.js.
 **Action:** When optimizing a service method, recursively check its internal dependencies for hidden sequential I/O. Use hierarchical parallelization to ensure that both the orchestrator and the worker functions are non-blocking.
+
+## 2026-03-20 - [SQL-Level Aggregation for Summaries]
+**Learning:** Summary and dashboard views often fetch thousands of records just to count them in JavaScript. This is a massive hidden bottleneck for both database I/O, network bandwidth, and Node.js memory. Moving these counts to the database using `GROUP BY` or `COUNT(*) FILTER (...)` reduces data transfer from $O(N)$ to $O(K)$ where $K$ is the number of categories.
+**Action:** Always scan services for loops or `.length` calls on large result sets used for counting. Replace with SQL-level aggregation queries.
