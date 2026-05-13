@@ -42,3 +42,8 @@
 **Vulnerability:** Resource-intensive endpoints (like Google Drive listings in `/api/publicacoes`) were unprotected by rate limiters, making them targets for DoS or API quota exhaustion.
 **Learning:** Rate limiting should not be reserved only for "commands" (POST/PUT/DELETE). Queries that proxy external APIs or perform heavy processing should also be protected.
 **Prevention:** Use `stateLimiter` (or similar) for GET routes that involve external service calls or high resource usage.
+
+## 2026-05-13 - [Rate Limiting for Logging Endpoints]
+**Vulnerability:** The `/api/diagnostico/log` endpoint was unprotected by rate limiting, allowing authenticated users to flood the system logs (DoS risk).
+**Learning:** Diagnostic and logging routes are often overlooked when applying rate limits compared to auth or intensive resource routes.
+**Prevention:** Always apply `diagnosticLimiter` or similar middleware to all diagnostic routes, even those that are authenticated.
