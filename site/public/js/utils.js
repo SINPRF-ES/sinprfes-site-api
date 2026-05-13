@@ -535,6 +535,21 @@
     trace("init", { targets: observerTargets.map((el) => el.id || el.className || el.tagName) });
   }
 
+  /** Palette: Fecha qualquer modal aberto ao pressionar Escape. */
+  function setupGlobalKeyHandlers() {
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        const modal = document.querySelector('.ui-modal-overlay[style*="display: flex"]');
+        if (modal && modal.id) {
+          fecharModal(modal.id);
+        }
+      }
+    }, { passive: true });
+  }
+
+  // Inicializa handlers globais
+  setupGlobalKeyHandlers();
+
   window.Utils = {
     obterToken,
     obterUserInfo,

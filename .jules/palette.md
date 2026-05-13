@@ -55,3 +55,7 @@
 ## 2026-05-08 - [Inline Validation & Feedback Pattern]
 **Learning:** For long forms (like Filie-se), using 'alert()' for validation errors is disruptive and lacks context. Replacing them with inline messaging (via 'window.Utils.exibirMensagem') paired with 'window.scrollTo' to the message container provides immediate, accessible, and non-blocking feedback.
 **Action:** Always prefer inline feedback containers over browser alerts. Ensure containers have 'aria-live="polite"' and use smooth scrolling to guide the user's focus to the feedback.
+
+## 2026-05-20 - [Global Modal Keyboard Shortcuts]
+**Learning:** Modals in a legacy JS environment often lack standard keyboard navigation (like closing on 'Escape'). Centralizing this behavior in a global utility (`utils.js`) using a single `keydown` listener that checks for visible modals ensures consistent behavior across all screens without duplicating logic.
+**Action:** Always implement global `Escape` key handlers for modals. Combine this with explicit `aria-label` on close buttons (like "×") to ensure both keyboard and screen reader accessibility.
