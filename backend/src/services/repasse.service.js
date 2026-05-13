@@ -67,6 +67,48 @@ async function getFiliadosAtivosCount(lotacaoKey) {
   return parseInt(rows[0].count);
 }
 
+/**
+ * Busca a contagem de filiados ativos para múltiplas lotações em uma única consulta.
+ * BOLT: Otimização de performance para evitar N queries sequenciais.
+ */
+async function getFiliadosAtivosCountsBatch(lotacaoKeys) {
+  const validKeys = lotacaoKeys.filter((k) => LOTACAO_KEYWORDS[k]);
+  if (validKeys.length === 0) {
+    const res = {};
+    lotacaoKeys.forEach((k) => (res[k] = 0));
+    return res;
+  }
+
+  // Monta as colunas de agregação dinamicamente
+  // Como LOTACAO_KEYWORDS é estático e controlado, o risco de SQLi é nulo aqui,
+  // mas usamos placeholders por boa prática se fôssemos usar valores dinâmicos.
+  const selectParts = [];
+  const params = [];
+  validKeys.forEach((key, i) => {
+    const keyword = LOTACAO_KEYWORDS[key].toUpperCase();
+    params.push(`%${keyword}%`);
+    selectParts.push(`COUNT(*) FILTER (WHERE UPPER(lotacao) LIKE $${params.length})::INTEGER as "${key}"`);
+  });
+
+  const query = `
+    SELECT
+      ${selectParts.join(",\n      ")}
+    FROM filiados
+    WHERE situacao = 'ATIVO'
+      AND arquivado_em IS NULL
+      AND situacao_sindical = 'FILIADO_SINPRF_ES'
+  `;
+
+  const { rows } = await pool.query(query, params);
+  const row = rows[0] || {};
+
+  const result = {};
+  lotacaoKeys.forEach((k) => {
+    result[k] = row[k] || 0;
+  });
+  return result;
+}
+
 async function listarResponsaveis(lotacaoKey = null) {
   let query = `
     SELECT id, nome, cpf, lotacao, perfil_acesso, situacao, arquivado_em
@@ -106,23 +148,18 @@ async function listarResponsaveis(lotacaoKey = null) {
 
 async function getRepasseAno(year) {
   // BOLT: Parallelize initial queries and filiado counts to reduce sequential DB roundtrips.
-  const [configRowsResult, lotacaoRowsResult, ...ativosCounts] = await Promise.all([
+  // Using getFiliadosAtivosCountsBatch to fetch all counts in one single query.
+  const [configRowsResult, lotacaoRowsResult, ativosPorLotacao] = await Promise.all([
     pool.query(`SELECT * FROM repasse_mes WHERE year = $1`, [year]),
     pool.query(`SELECT rl.*, f.nome as responsavel_nome, f.cpf as responsavel_cpf
                 FROM repasse_lotacao rl
                 LEFT JOIN filiados f ON rl.responsavel_id = f.id
                 WHERE rl.year = $1`, [year]),
-    ...LOTACOES_REPASSE.map(lot => getFiliadosAtivosCount(lot))
+    getFiliadosAtivosCountsBatch(LOTACOES_REPASSE)
   ]);
 
   const configRows = configRowsResult.rows;
   const lotacaoRows = lotacaoRowsResult.rows;
-
-  // BOLT: Assemble ativosPorLotacao from parallel results.
-  const ativosPorLotacao = {};
-  LOTACOES_REPASSE.forEach((lot, i) => {
-    ativosPorLotacao[lot] = ativosCounts[i];
-  });
 
   // BOLT: Pre-index configurations and lotação data to avoid O(N*M) lookups inside loops.
   const configByMonth = new Map(configRows.map(r => [r.month, r]));
@@ -347,14 +384,20 @@ async function updateRepasseMes(year, month, perCapita, localidadesData) {
 }
 
 async function getRepasseResumo(ano, options = {}) {
-  const [configResult, filiadosResult, debitosResult, eventosResult] = await Promise.all([
+  // BOLT: Use SQL aggregation (GROUP BY) instead of fetching all filiado rows.
+  // This reduces data transfer from thousands of rows to ~20 rows.
+  const [configResult, statsResult, debitosResult, eventosResult] = await Promise.all([
     pool.query(`SELECT * FROM repasse_config WHERE ano_ref = $1`, [ano]),
     pool.query(`
-      SELECT id, nome, situacao, lotacao
+      SELECT
+        UPPER(situacao) as situacao_norm,
+        lotacao,
+        COUNT(*)::INTEGER as count
       FROM filiados
       WHERE arquivado_em IS NULL
         AND situacao_sindical = 'FILIADO_SINPRF_ES'
         AND UPPER(situacao) IN ('ATIVO', 'VETERANO')
+      GROUP BY UPPER(situacao), lotacao
     `),
     pool.query(`
       SELECT lotacao_id, COALESCE(SUM(valor), 0) AS total
@@ -392,14 +435,17 @@ async function getRepasseResumo(ano, options = {}) {
   let qtdAtivosTotal = 0;
   let qtdVeteranosTotal = 0;
 
-  filiadosResult.rows.forEach((f) => {
-    const situacao = String(f.situacao || '').toUpperCase();
-    const lotacaoReal = toLotacaoReal(f.lotacao);
+  statsResult.rows.forEach((row) => {
+    const situacao = row.situacao_norm;
+    const count = row.count;
+    const lotacaoReal = toLotacaoReal(row.lotacao);
+
     if (situacao === 'ATIVO') {
-      qtdAtivosTotal += 1;
-      apoioCount.set(lotacaoReal, (apoioCount.get(lotacaoReal) || 0) + 1);
+      qtdAtivosTotal += count;
+      apoioCount.set(lotacaoReal, (apoioCount.get(lotacaoReal) || 0) + count);
+    } else if (situacao === 'VETERANO') {
+      qtdVeteranosTotal += count;
     }
-    if (situacao === 'VETERANO') qtdVeteranosTotal += 1;
   });
 
   const lotacoesResumo = [...LOTACOES_REPASSE, 'SEM LOTAÇÃO'];
