@@ -302,6 +302,54 @@ async function getUltimosDadosParaRelatorioComOverride(lotacaoKey, prfTotalOverr
   };
 }
 
+/**
+ * Otimização Bolt: Busca os dados mais recentes para múltiplas lotações em batch,
+ * eliminando o padrão N+1 no módulo de relatórios.
+ */
+async function getUltimosDadosParaRelatorioBatch(lotacaoKeys) {
+  const [ativosPorLotacao, prfRowsResult] = await Promise.all([
+    getFiliadosAtivosCountsBatch(lotacaoKeys),
+    pool.query(`
+      SELECT DISTINCT ON (lotacao_key)
+        lotacao_key, year, month, prf_total
+      FROM repasse_lotacao
+      WHERE lotacao_key = ANY($1)
+      ORDER BY lotacao_key, year DESC, month DESC
+    `, [lotacaoKeys])
+  ]);
+
+  const prfMap = new Map(prfRowsResult.rows.map(r => [r.lotacao_key, r]));
+
+  return lotacaoKeys.map(lot => {
+    const filiadosAtivos = ativosPorLotacao[lot] || 0;
+    const prfData = prfMap.get(lot);
+
+    if (!prfData) {
+      return {
+        lotacao: lot,
+        filiadosAtivos,
+        prfTotal: null,
+        percentual: null,
+        competencia: null
+      };
+    }
+
+    const prfTotal = prfData.prf_total;
+    let percentual = null;
+    if (prfTotal > 0) {
+      percentual = (filiadosAtivos / prfTotal) * 100;
+    }
+
+    return {
+      lotacao: lot,
+      filiadosAtivos,
+      prfTotal,
+      percentual,
+      competencia: { year: prfData.year, month: prfData.month }
+    };
+  });
+}
+
 async function getEfetivoManualLotacoes() {
   const { rows } = await pool.query(`
     SELECT lotacao_key, prf_total, updated_at
@@ -931,6 +979,7 @@ async function listarResponsaveisComBusca(q = '') {
 module.exports = {
   getRepasseAno,
   getUltimosDadosParaRelatorio,
+  getUltimosDadosParaRelatorioBatch,
   getUltimosDadosParaRelatorioComOverride,
   getEfetivoManualLotacoes,
   upsertEfetivoManualLotacoes,

@@ -173,14 +173,8 @@ async function buscarDadosAgregados(tipo, valor) {
         )
         .then((res) => res.rows[0])
     );
-    tasks.push(
-      Promise.all(
-        LOTACOES_REPASSE.map(async (lot) => {
-          const repData = await repasseService.getUltimosDadosParaRelatorio(lot);
-          return { lotacao: lot, ...repData };
-        })
-      )
-    );
+    // BOLT: Use batch function to avoid N+1 queries for all lotations.
+    tasks.push(repasseService.getUltimosDadosParaRelatorioBatch(LOTACOES_REPASSE));
   }
 
   const taskResults = await Promise.all(tasks);
