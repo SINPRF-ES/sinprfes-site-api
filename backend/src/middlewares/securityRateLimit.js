@@ -59,10 +59,23 @@ const resourceIntensiveLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+/**
+ * Limiter para Registro de Acessos (Analytics)
+ * Protege contra spam e inundação de logs no banco de dados.
+ */
+const analyticsHitLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 60, // limite de 60 registros por IP por hora
+  message: { success: false, error: 'Limite de registros atingido.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   loginLimiter,
   passwordResetLimiter,
   publicFormLimiter,
   pushCampaignLimiter,
-  resourceIntensiveLimiter
+  resourceIntensiveLimiter,
+  analyticsHitLimiter
 };
