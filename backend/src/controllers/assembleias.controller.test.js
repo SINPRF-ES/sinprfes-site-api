@@ -61,12 +61,18 @@ describe('Assembleias Controller', () => {
     req.params = { id: VALID_UUID, vid: VALID_VOTACAO_UUID };
     req.body = { voto: 'SIM' };
 
-    service.buscarVotacaoAtiva.mockResolvedValue({ id: VALID_VOTACAO_UUID, encerra_em: new Date(Date.now() + 10000).toISOString() });
+    service.buscarVotacaoAtiva.mockResolvedValue({
+      id: VALID_VOTACAO_UUID,
+      encerra_em: new Date(Date.now() + 10000).toISOString(),
+      quorum_snapshot_id: 'q1'
+    });
     service.verificarElegibilidade.mockResolvedValue(true);
     service.registrarVoto.mockResolvedValue({});
-    service.contarVotos.mockResolvedValue({ total: 10, SIM: 6, NAO: 4 });
-    service.listarVotosNominais.mockResolvedValue([]);
-    service.buscarUltimoQuorum.mockResolvedValue({ id: 'q1' });
+    service.listarVotosNominais.mockResolvedValue([
+      { voto: 'SIM' }, { voto: 'SIM' }, { voto: 'SIM' }, { voto: 'SIM' }, { voto: 'SIM' }, { voto: 'SIM' },
+      { voto: 'NAO' }, { voto: 'NAO' }, { voto: 'NAO' }, { voto: 'NAO' }
+    ]);
+    service.calcularContagemVotos.mockReturnValue({ total: 10, SIM: 6, NAO: 4, ABSTENCAO: 0 });
     service.contarPresentesNoQuorum.mockResolvedValue(10); // Matches contagem.total
     service.finalizarVotacao.mockResolvedValue({ id: VALID_VOTACAO_UUID, status: 'ENCERRADA' });
 

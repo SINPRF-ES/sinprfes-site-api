@@ -607,6 +607,21 @@ async function listarVotosNominais(votacaoId) {
   return rows;
 }
 
+/**
+ * BOLT: Calcula a contagem de votos em memória a partir de uma lista nominal.
+ * Evita uma query extra de COUNT(*) no banco de dados.
+ */
+function calcularContagemVotos(votos = []) {
+  const contagem = { SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 };
+  for (const v of votos) {
+    if (v.voto === 'SIM') contagem.SIM++;
+    else if (v.voto === 'NAO') contagem.NAO++;
+    else if (v.voto === 'ABSTENCAO') contagem.ABSTENCAO++;
+  }
+  contagem.total = contagem.SIM + contagem.NAO + contagem.ABSTENCAO;
+  return contagem;
+}
+
 async function finalizarVotacao(votacaoId, userId = null) {
   const client = await pool.connect();
   try {
@@ -1075,10 +1090,10 @@ async function buscarEstadoResumido(assembleiaId) {
 
     let votacaoResumo = null;
     if (votacaoAtiva) {
-        const [contagem, votos] = await Promise.all([
-            contarVotos(votacaoAtiva.id),
-            listarVotosNominais(votacaoAtiva.id)
-        ]);
+        // BOLT: Calculate count in memory after fetching nominal votes, saving 1 DB trip
+        const votos = await listarVotosNominais(votacaoAtiva.id);
+        const contagem = calcularContagemVotos(votos);
+
         const fim = new Date(votacaoAtiva.encerra_em).getTime();
         const agora = new Date().getTime();
         const tempoRestante = Math.max(0, Math.floor((fim - agora) / 1000));
@@ -1139,7 +1154,7 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
     if (votacaoAtiva && (votacaoAtiva.status === 'ATIVA' || votacaoAtiva.tempo_expirado)) {
       votacaoTaskIdx = subTasks.length;
       subTasks.push(Promise.all([
-        contarVotos(votacaoAtiva.id).catch(() => ({ SIM: 0, NAO: 0, ABSTENCAO: 0, total: 0 })),
+        // BOLT: Removed redundant contarVotos query here, now calculated in memory below
         listarVotosNominais(votacaoAtiva.id).catch(() => []),
         filiadoId ? verificarElegibilidade(votacaoAtiva.id, filiadoId).catch(() => false) : Promise.resolve(false),
         filiadoId ? verificarElegibilidadePorQuorum(votacaoAtiva.quorum_snapshot_id, filiadoId).catch(() => false) : Promise.resolve(false)
@@ -1161,7 +1176,9 @@ async function buscarEstadoCompleto(assembleiaId, filiadoId = null) {
     const subResults = await Promise.all(subTasks);
 
     if (votacaoTaskIdx !== -1) {
-      const [contagem, votos, elegivel, presencaNoQuorum] = subResults[votacaoTaskIdx];
+      const [votos, elegivel, presencaNoQuorum] = subResults[votacaoTaskIdx];
+      // BOLT: Aggregating vote count in memory from the nominal list
+      const contagem = calcularContagemVotos(votos);
 
       let jaVotou = false;
       let motivo_inelegibilidade = null;
@@ -1348,5 +1365,6 @@ module.exports = {
   contarPresentesNoQuorum,
   buscarEstadoResumido,
   buscarDiagnostico,
-  normalizarAssembleia
+  normalizarAssembleia,
+  calcularContagemVotos
 };

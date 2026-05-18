@@ -270,8 +270,8 @@ describe('Assembleias Service', () => {
       pool.query.mockResolvedValueOnce({ rows: [{ id: 'v1', titulo: 'V1', encerra_em: new Date(Date.now() + 60000) }] });
       // 4. contarPresentesNoQuorum
       pool.query.mockResolvedValueOnce({ rows: [{ total: 5 }] });
-      // 5. contarVotos
-      pool.query.mockResolvedValueOnce({ rows: [{ SIM: 2, NAO: 1, ABSTENCAO: 0 }] });
+      // 5. listarVotosNominais (Bolt optimization: now used to calculate count in memory)
+      pool.query.mockResolvedValueOnce({ rows: [{ voto: 'SIM' }, { voto: 'SIM' }, { voto: 'NAO' }] });
 
       const res = await service.buscarEstadoResumido('1');
       expect(res.assembleia.estado).toBe('EM_CURSO');
@@ -279,6 +279,7 @@ describe('Assembleias Service', () => {
       expect(res.quorumVigente.total).toBe(5);
       expect(res.votacaoAtiva.tempoRestanteSegundos).toBeGreaterThan(0);
       expect(res.votacaoAtiva.contagem.SIM).toBe(2);
+      expect(res.votacaoAtiva.contagem.NAO).toBe(1);
     });
   });
 });
