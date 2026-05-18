@@ -725,15 +725,15 @@ async function votar(req, res) {
 
     await service.registrarVoto(vid, atorId, voto, id);
 
-    const [contagem, votos] = await Promise.all([
-      service.contarVotos(vid),
-      service.listarVotosNominais(vid)
-    ]);
+    // BOLT: Fetch nominal votes and calculate count in memory, saving 1 DB trip
+    const votos = await service.listarVotosNominais(vid);
+    const contagem = service.calcularContagemVotos(votos);
 
     // Auto-encerramento se todos os presentes votaram
-    const quorumVigente = await service.buscarUltimoQuorum(id);
-    if (quorumVigente) {
-        const totalPresentes = await service.contarPresentesNoQuorum(quorumVigente.id);
+    // BOLT: Use existing snapshot ID from votacao object to avoid redundant quorum lookup
+    const quorumSnapshotId = votacao.quorum_snapshot_id;
+    if (quorumSnapshotId) {
+        const totalPresentes = await service.contarPresentesNoQuorum(quorumSnapshotId);
         if (contagem.total >= totalPresentes && totalPresentes > 0) {
             log.info("AssembleiaVotacaoAutoEncerramento", { requestId, assembleiaId: id, votacaoId: vid, votos: contagem.total, presentes: totalPresentes });
             const finalizada = await service.finalizarVotacao(vid);
@@ -770,10 +770,10 @@ async function encerrarVotacao(req, res) {
     }
 
     const finalizada = await service.finalizarVotacao(vid, atorId);
-    const [contagem, votos] = await Promise.all([
-      service.contarVotos(vid),
-      service.listarVotosNominais(vid)
-    ]);
+
+    // BOLT: Calculate count in memory after fetching nominal votes, saving 1 DB trip
+    const votos = await service.listarVotosNominais(vid);
+    const contagem = service.calcularContagemVotos(votos);
 
     socket.emitEvent(id, "votacao:encerrada", { ...finalizada, contagem, votos });
 
