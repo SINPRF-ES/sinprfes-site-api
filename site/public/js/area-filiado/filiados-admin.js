@@ -162,7 +162,7 @@
                         </div>
                         <div class="filiados-toolbar">
                             <button id="btn-novo-filiado" class="btn btn-primary filiados-novo-btn" style="display:none;">+ Novo Filiado</button>
-                            <div id="filiados-count" class="filiados-count">Total: 0</div>
+                            <div id="filiados-count" class="filiados-count" role="status" aria-live="polite">Total: 0</div>
                             <input class="ui-input filiados-search" type="text" id="busca-filiados" placeholder="${placeholder}">
                         </div>
                     </div>
@@ -245,6 +245,20 @@
         await carregarLista();
     }
 
+    function limparFiltros() {
+        const campoBusca = document.getElementById("busca-filiados");
+        const filtroEstado = document.getElementById("filtro-estado-cadastro");
+        const filtroSindical = document.getElementById("filtro-situacao-sindical");
+        const filtroFuncional = document.getElementById("filtro-situacao-funcional");
+
+        if (campoBusca) campoBusca.value = "";
+        if (filtroEstado) filtroEstado.value = "CADASTRO_ATIVO";
+        if (filtroSindical) filtroSindical.value = "TODOS";
+        if (filtroFuncional) filtroFuncional.value = "TODOS";
+
+        carregarLista();
+    }
+
     async function carregarLista() {
         const listaEl = document.getElementById("lista-filiados");
         if (!listaEl) return;
@@ -315,7 +329,14 @@
         if (countEl) countEl.textContent = `Total: ${res.length}`;
 
         if (!res.length) {
-            el.innerHTML = `<div class="filiado-card" style="text-align:center;">Nenhum registro.</div>`;
+            el.innerHTML = `
+                <div class="filiado-card" style="text-align:center; padding: var(--ui-space-5) var(--ui-space-3);">
+                    <div style="font-size: 3rem; margin-bottom: var(--ui-space-3); opacity: 0.5;">🔍</div>
+                    <h3 style="color: var(--ui-primary); margin-bottom: var(--ui-space-2);">Nenhum filiado encontrado</h3>
+                    <p style="color: var(--ui-text-muted); margin-bottom: var(--ui-space-4);">Tente ajustar sua busca ou filtros para encontrar o que procura.</p>
+                    <button class="ui-button ui-button-outline" onclick="FiliadosAdmin.limparFiltros()">Limpar todos os filtros</button>
+                </div>
+            `;
             return;
         }
 
@@ -1242,7 +1263,8 @@
         removerAvatar,
         handleParentescoChange,
         renderizarFormularioNovoFiliado,
-        abrirNovoFiliado
+        abrirNovoFiliado,
+        limparFiltros
     };
 
 })(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : self));
