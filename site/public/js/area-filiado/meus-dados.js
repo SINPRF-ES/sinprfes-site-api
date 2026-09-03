@@ -899,7 +899,26 @@
                 return;
             }
 
-            document.getElementById("me-endereco").value = d.logradouro || "";
+            const inputEnd = document.getElementById("me-endereco");
+            const temLog = d.logradouro && String(d.logradouro).trim() !== "";
+            const temBai = d.bairro && String(d.bairro).trim() !== "";
+
+            if (inputEnd) {
+                let enderecoTexto = "";
+                if (temLog && temBai) {
+                    enderecoTexto = `${d.logradouro} - ${d.bairro}`;
+                } else if (temLog) {
+                    enderecoTexto = d.logradouro;
+                } else if (temBai) {
+                    enderecoTexto = d.bairro;
+                }
+                inputEnd.value = enderecoTexto;
+
+                const ehCompleto = temLog && temBai;
+                inputEnd.readOnly = ehCompleto;
+                inputEnd.style.backgroundColor = ehCompleto ? "#f0f0f0" : "#ffffff";
+            }
+
             document.getElementById("me-cidade").value = d.localidade || "";
             document.getElementById("me-uf").value = d.uf || "";
         } catch (e) {

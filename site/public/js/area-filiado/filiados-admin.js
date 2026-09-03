@@ -783,9 +783,28 @@
                     const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
                     const data = await res.json();
                     if (!data.erro) {
-                        document.getElementById("edit-logradouro").value = `${data.logradouro}${data.bairro ? ' - ' + data.bairro : ''}`;
-                        document.getElementById("edit-cidade").value = data.localidade;
-                        document.getElementById("edit-uf").value = data.uf;
+                        const inputLog = document.getElementById("edit-logradouro");
+                        const temLog = data.logradouro && String(data.logradouro).trim() !== "";
+                        const temBai = data.bairro && String(data.bairro).trim() !== "";
+
+                        if (inputLog) {
+                            let endTexto = "";
+                            if (temLog && temBai) {
+                                endTexto = `${data.logradouro} - ${data.bairro}`;
+                            } else if (temLog) {
+                                endTexto = data.logradouro;
+                            } else if (temBai) {
+                                endTexto = data.bairro;
+                            }
+                            inputLog.value = endTexto;
+
+                            const ehCompleto = temLog && temBai;
+                            inputLog.readOnly = ehCompleto;
+                            inputLog.style.backgroundColor = ehCompleto ? "#f8f9fa" : "#ffffff";
+                        }
+
+                        document.getElementById("edit-cidade").value = data.localidade || "";
+                        document.getElementById("edit-uf").value = data.uf || "";
                     }
                 } catch (e) { console.error("Erro CEP", e); }
             }
@@ -1134,9 +1153,28 @@
                         const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
                         const data = await res.json();
                         if (!data.erro) {
-                            document.getElementById("new-logradouro").value = `${data.logradouro}${data.bairro ? ' - ' + data.bairro : ''}`;
-                            document.getElementById("new-cidade").value = data.localidade;
-                            document.getElementById("new-uf").value = data.uf;
+                            const inputLog = document.getElementById("new-logradouro");
+                            const temLog = data.logradouro && String(data.logradouro).trim() !== "";
+                            const temBai = data.bairro && String(data.bairro).trim() !== "";
+
+                            if (inputLog) {
+                                let endTexto = "";
+                                if (temLog && temBai) {
+                                    endTexto = `${data.logradouro} - ${data.bairro}`;
+                                } else if (temLog) {
+                                    endTexto = data.logradouro;
+                                } else if (temBai) {
+                                    endTexto = data.bairro;
+                                }
+                                inputLog.value = endTexto;
+
+                                const ehCompleto = temLog && temBai;
+                                inputLog.readOnly = ehCompleto;
+                                inputLog.style.backgroundColor = ehCompleto ? "#f0f0f0" : "#ffffff";
+                            }
+
+                            document.getElementById("new-cidade").value = data.localidade || "";
+                            document.getElementById("new-uf").value = data.uf || "";
                         }
                     } catch (err) { console.error("Erro busca CEP", err); }
                 }
