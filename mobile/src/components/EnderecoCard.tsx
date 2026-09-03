@@ -14,10 +14,12 @@ interface Props {
 
 const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false, cardStyle = {} }) => {
   const [isBuscando, setIsBuscando] = useState(false);
+  const [isEnderecoEditable, setIsEnderecoEditable] = useState(false);
 
   const handleCepChange = (value: string) => {
     const digits = onlyDigits(value);
-    setFiliado(f => (f ? { ...f, cep: digits } : null));
+    setIsEnderecoEditable(false);
+    setFiliado(f => (f ? { ...f, cep: digits, logradouro_bairro: '', cidade: '', uf: '' } : null));
   };
 
   const handleBuscarCep = async () => {
@@ -31,7 +33,9 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
     try {
       const endereco = await buscarCep(cep);
       if (endereco) {
-        setFiliado(f => f ? { ...f, ...endereco } : null);
+        setIsEnderecoEditable(Boolean(endereco.isEnderecoEditable));
+        const { isEnderecoEditable: _, ...dadosEndereco } = endereco;
+        setFiliado(f => f ? { ...f, ...dadosEndereco } : null);
         Alert.alert('Sucesso', 'Endereço encontrado e preenchido.');
       } else {
         Alert.alert('CEP não encontrado', 'O CEP informado não foi localizado.');
@@ -69,10 +73,11 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
       </View>
       <Text style={styles.label}>Logradouro e Bairro</Text>
       <TextInput
-        style={styles.inputDisabled}
+        style={isEnderecoEditable ? styles.input : styles.inputDisabled}
         value={filiado?.logradouro_bairro || ''}
+        onChangeText={(text) => setFiliado(f => f ? { ...f, logradouro_bairro: text } : null)}
         placeholder="Preenchido pela busca de CEP"
-        editable={false}
+        editable={isEnderecoEditable}
         accessibilityLabel="Logradouro e Bairro"
         textContentType="streetAddressLine1"
       />

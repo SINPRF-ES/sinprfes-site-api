@@ -30,9 +30,21 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    const limparEnderecoCampos = () => {
+        const inputLog = document.getElementById("logradouro");
+        const inputBai = document.getElementById("bairro");
+        const inputCid = document.getElementById("cidade");
+        const inputUf  = document.getElementById("uf");
+        if (inputLog) { inputLog.value = ""; inputLog.readOnly = true; inputLog.style.backgroundColor = "#eaeff5"; }
+        if (inputBai) { inputBai.value = ""; inputBai.readOnly = true; inputBai.style.backgroundColor = "#eaeff5"; }
+        if (inputCid) { inputCid.value = ""; inputCid.readOnly = true; inputCid.style.backgroundColor = "#eaeff5"; }
+        if (inputUf)  { inputUf.value = "";  inputUf.readOnly = true;  inputUf.style.backgroundColor = "#eaeff5"; }
+    };
+
     if(inputCep) {
         inputCep.addEventListener("input", e => {
             e.target.value = e.target.value.replace(/\D/g, "").slice(0, 8).replace(/^(\d{5})(\d)/, "$1-$2");
+            limparEnderecoCampos();
         });
     }
 
@@ -130,12 +142,38 @@ document.addEventListener("DOMContentLoaded", () => {
             const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
             const d = await r.json();
             if(!d.erro) {
-                document.getElementById("logradouro").value = d.logradouro;
-                document.getElementById("bairro").value = d.bairro;
-                document.getElementById("cidade").value = d.localidade;
-                document.getElementById("uf").value = d.uf;
-                document.getElementById("numero").focus();
+                const inputLog = document.getElementById("logradouro");
+                const inputBai = document.getElementById("bairro");
+                const inputCid = document.getElementById("cidade");
+                const inputUf  = document.getElementById("uf");
+
+                const temLog = d.logradouro && String(d.logradouro).trim() !== "";
+                const temBai = d.bairro && String(d.bairro).trim() !== "";
+
+                if (inputLog) {
+                    inputLog.value = temLog ? d.logradouro : "";
+                    inputLog.readOnly = temLog;
+                    inputLog.style.backgroundColor = temLog ? "#eaeff5" : "#fff";
+                }
+
+                if (inputBai) {
+                    inputBai.value = temBai ? d.bairro : "";
+                    inputBai.readOnly = temBai;
+                    inputBai.style.backgroundColor = temBai ? "#eaeff5" : "#fff";
+                }
+
+                if (inputCid) inputCid.value = d.localidade || "";
+                if (inputUf) inputUf.value = d.uf || "";
+
+                if (!temLog && inputLog) {
+                    inputLog.focus();
+                } else if (!temBai && inputBai) {
+                    inputBai.focus();
+                } else {
+                    document.getElementById("numero").focus();
+                }
             } else {
+                limparEnderecoCampos();
                 if (cepError) {
                     cepError.textContent = "CEP não encontrado.";
                     cepError.style.display = "block";
@@ -145,6 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         } catch(e) {
             console.error(e);
+            limparEnderecoCampos();
             if (cepError) {
                 cepError.textContent = "Erro ao buscar CEP.";
                 cepError.style.display = "block";
