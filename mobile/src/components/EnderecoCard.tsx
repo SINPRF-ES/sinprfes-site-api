@@ -19,7 +19,7 @@ const EnderecoCard: React.FC<Props> = ({ filiado, setFiliado, hideTitle = false,
   const handleCepChange = (value: string) => {
     const digits = onlyDigits(value);
     setIsEnderecoEditable(false);
-    setFiliado(f => (f ? { ...f, cep: digits } : null));
+    setFiliado(f => (f ? { ...f, cep: digits, logradouro_bairro: '', cidade: '', uf: '' } : null));
   };
 
   const handleBuscarCep = async () => {

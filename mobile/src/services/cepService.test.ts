@@ -106,4 +106,37 @@ describe('cepService - buscarCep', () => {
 
     await expect(buscarCep('29200080')).rejects.toThrow('Não foi possível buscar o CEP. Verifique sua conexão.');
   });
+
+  test('Transição CEP A (incompleto / editável) -> CEP B (completo / não editável)', async () => {
+    // 1. CEP A: Incompleto
+    mockedAxios.get.mockResolvedValueOnce({
+      data: { logradouro: '', bairro: 'Centro', localidade: 'Zona Rural', uf: 'ES' },
+    });
+    const resultA = await buscarCep('29000000');
+    expect(resultA?.isEnderecoEditable).toBe(true);
+
+    // 2. CEP B: Completo
+    mockedAxios.get.mockResolvedValueOnce({
+      data: { logradouro: 'Avenida Edízio Cirne', bairro: 'Praia do Morro', localidade: 'Guarapari', uf: 'ES' },
+    });
+    const resultB = await buscarCep('29200080');
+    expect(resultB?.isEnderecoEditable).toBe(false);
+    expect(resultB?.logradouro_bairro).toBe('Avenida Edízio Cirne, Praia do Morro');
+  });
+
+  test('Transição CEP A (incompleto) -> alteração para CEP inválido (retorna null)', async () => {
+    // 1. CEP A: Incompleto
+    mockedAxios.get.mockResolvedValueOnce({
+      data: { logradouro: '', bairro: 'Centro', localidade: 'Zona Rural', uf: 'ES' },
+    });
+    const resultA = await buscarCep('29000000');
+    expect(resultA?.isEnderecoEditable).toBe(true);
+
+    // 2. CEP B: Inválido
+    mockedAxios.get.mockResolvedValueOnce({
+      data: { erro: true },
+    });
+    const resultB = await buscarCep('99999999');
+    expect(resultB).toBeNull();
+  });
 });

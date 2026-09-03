@@ -512,7 +512,19 @@
         }
 
         const cepInput = document.getElementById("me-cep");
-        if (aplicarMascaraCEP) aplicarMascaraCEP(cepInput);
+        const resetarEnderecoMeusDados = () => {
+            const inputEnd = document.getElementById("me-endereco");
+            const inputCid = document.getElementById("me-cidade");
+            const inputUf  = document.getElementById("me-uf");
+            if (inputEnd) { inputEnd.value = ""; inputEnd.readOnly = true; inputEnd.style.backgroundColor = "#f0f0f0"; }
+            if (inputCid) { inputCid.value = ""; }
+            if (inputUf)  { inputUf.value = ""; }
+        };
+
+        if (cepInput) {
+            if (aplicarMascaraCEP) aplicarMascaraCEP(cepInput);
+            cepInput.addEventListener("input", resetarEnderecoMeusDados);
+        }
 
         // --- DEPENDENTES ---
         const containerDependentes = document.getElementById("dependentes-container-meus-dados");
@@ -895,6 +907,10 @@
             const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
             const d = await r.json();
             if (d?.erro) {
+                const inputEnd = document.getElementById("me-endereco");
+                if (inputEnd) { inputEnd.value = ""; inputEnd.readOnly = true; inputEnd.style.backgroundColor = "#f0f0f0"; }
+                document.getElementById("me-cidade").value = "";
+                document.getElementById("me-uf").value = "";
                 alert("CEP não encontrado.");
                 return;
             }
@@ -922,6 +938,10 @@
             document.getElementById("me-cidade").value = d.localidade || "";
             document.getElementById("me-uf").value = d.uf || "";
         } catch (e) {
+            const inputEnd = document.getElementById("me-endereco");
+            if (inputEnd) { inputEnd.value = ""; inputEnd.readOnly = true; inputEnd.style.backgroundColor = "#f0f0f0"; }
+            document.getElementById("me-cidade").value = "";
+            document.getElementById("me-uf").value = "";
             alert("Erro ao buscar CEP.");
         } finally {
             if (btn) {

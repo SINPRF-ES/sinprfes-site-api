@@ -776,6 +776,15 @@
         const cepInput = form.querySelector(".campo-cep");
         const btnBuscarCep = document.getElementById("btn-buscar-cep"); // Note: it's a span now with 🔍
 
+        const resetarEnderecoModal = () => {
+            const inputLog = document.getElementById("edit-logradouro");
+            if (inputLog) { inputLog.value = ""; inputLog.readOnly = true; inputLog.style.backgroundColor = "#f8f9fa"; }
+            const inputCid = document.getElementById("edit-cidade");
+            const inputUf  = document.getElementById("edit-uf");
+            if (inputCid) inputCid.value = "";
+            if (inputUf) inputUf.value = "";
+        };
+
         const executarBuscaCep = async () => {
             const cep = (cepInput.value || "").replace(/\D/g, "");
             if (cep.length === 8) {
@@ -805,13 +814,19 @@
 
                         document.getElementById("edit-cidade").value = data.localidade || "";
                         document.getElementById("edit-uf").value = data.uf || "";
+                    } else {
+                        resetarEnderecoModal();
                     }
-                } catch (e) { console.error("Erro CEP", e); }
+                } catch (e) {
+                    console.error("Erro CEP", e);
+                    resetarEnderecoModal();
+                }
             }
         };
 
         if (cepInput) {
             window.Utils?.aplicarMascaraCEP?.(cepInput);
+            cepInput.addEventListener("input", resetarEnderecoModal);
             cepInput.onblur = executarBuscaCep;
             // also trigger on search icon click
             const searchIcon = form.querySelector(".cep-search-icon");
@@ -1144,8 +1159,18 @@
         if (aplicarMascaraData) aplicarMascaraData(form.querySelector('input[name="data_nascimento"]'));
 
         const cepInp = form.querySelector("#new-cep");
+        const resetarEnderecoNovo = () => {
+            const inputLog = document.getElementById("new-logradouro");
+            if (inputLog) { inputLog.value = ""; inputLog.readOnly = true; inputLog.style.backgroundColor = "#f0f0f0"; }
+            const inputCid = document.getElementById("new-cidade");
+            const inputUf  = document.getElementById("new-uf");
+            if (inputCid) inputCid.value = "";
+            if (inputUf) inputUf.value = "";
+        };
+
         if (cepInp) {
             if (aplicarMascaraCEP) aplicarMascaraCEP(cepInp);
+            cepInp.addEventListener("input", resetarEnderecoNovo);
             cepInp.onblur = async () => {
                 const cep = (cepInp.value || "").replace(/\D/g, "");
                 if (cep.length === 8) {
@@ -1175,8 +1200,13 @@
 
                             document.getElementById("new-cidade").value = data.localidade || "";
                             document.getElementById("new-uf").value = data.uf || "";
+                        } else {
+                            resetarEnderecoNovo();
                         }
-                    } catch (err) { console.error("Erro busca CEP", err); }
+                    } catch (err) {
+                        console.error("Erro busca CEP", err);
+                        resetarEnderecoNovo();
+                    }
                 }
             };
         }

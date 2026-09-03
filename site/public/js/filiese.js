@@ -30,9 +30,21 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    const limparEnderecoCampos = () => {
+        const inputLog = document.getElementById("logradouro");
+        const inputBai = document.getElementById("bairro");
+        const inputCid = document.getElementById("cidade");
+        const inputUf  = document.getElementById("uf");
+        if (inputLog) { inputLog.value = ""; inputLog.readOnly = true; inputLog.style.backgroundColor = "#eaeff5"; }
+        if (inputBai) { inputBai.value = ""; inputBai.readOnly = true; inputBai.style.backgroundColor = "#eaeff5"; }
+        if (inputCid) { inputCid.value = ""; inputCid.readOnly = true; inputCid.style.backgroundColor = "#eaeff5"; }
+        if (inputUf)  { inputUf.value = "";  inputUf.readOnly = true;  inputUf.style.backgroundColor = "#eaeff5"; }
+    };
+
     if(inputCep) {
         inputCep.addEventListener("input", e => {
             e.target.value = e.target.value.replace(/\D/g, "").slice(0, 8).replace(/^(\d{5})(\d)/, "$1-$2");
+            limparEnderecoCampos();
         });
     }
 
@@ -161,6 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     document.getElementById("numero").focus();
                 }
             } else {
+                limparEnderecoCampos();
                 if (cepError) {
                     cepError.textContent = "CEP não encontrado.";
                     cepError.style.display = "block";
@@ -170,6 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         } catch(e) {
             console.error(e);
+            limparEnderecoCampos();
             if (cepError) {
                 cepError.textContent = "Erro ao buscar CEP.";
                 cepError.style.display = "block";
