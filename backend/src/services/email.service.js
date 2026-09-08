@@ -1,6 +1,6 @@
 // src/services/email.service.js
 const { Resend } = require("resend");
-const { formatarDataBR } = require("../utils/format");
+const { formatarDataBR, gerarNomeArquivoRessarcimento } = require("../utils/format");
 
 // 1. Inicializa o cliente Resend com a chave API
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_123");
@@ -123,6 +123,8 @@ Atenciosamente,
 SINPRF-ES
 `;
 
+  const filenamePdf = gerarNomeArquivoRessarcimento(dados);
+
   // 1. Envio para o Sindicato
   try {
     const payloadSindicato = {
@@ -130,7 +132,7 @@ SINPRF-ES
       to: mailSindicato,
       subject,
       text: corpoEmail,
-      attachments: [{ filename: "pedido_ressarcimento.pdf", content: pdfBuffer.toString("base64") }],
+      attachments: [{ filename: filenamePdf, content: pdfBuffer.toString("base64") }],
     };
     const resSindicato = await resend.emails.send(payloadSindicato);
     if (resSindicato.error) throw resSindicato.error;
@@ -148,7 +150,7 @@ SINPRF-ES
         to: emailFiliado,
         subject: `CÓPIA: ${subject}`,
         text: corpoEmail,
-        attachments: [{ filename: "pedido_ressarcimento.pdf", content: pdfBuffer.toString("base64") }],
+        attachments: [{ filename: filenamePdf, content: pdfBuffer.toString("base64") }],
       };
       const resSolicitante = await resend.emails.send(payloadSolicitante);
       if (resSolicitante.error) throw resSolicitante.error;
