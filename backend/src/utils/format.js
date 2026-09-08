@@ -124,6 +124,52 @@ function formatarCEP(cep) {
   return limpo.replace(/(\d{5})(\d{3})/, "$1-$2");
 }
 
+/**
+ * Gera o nome de arquivo para o PDF de Pedido de Ressarcimento no formato:
+ * Ressarcimento_<Nome_Completo>_<DD_MM_AAAA>.pdf
+ */
+function gerarNomeArquivoRessarcimento(dados = {}) {
+  const nomeBruto = String(dados.nome || "").trim();
+
+  // Sanitização do nome:
+  // 1. Remove caracteres de controle e símbolos incompatíveis com nomes de arquivos (\ / : * ? " < > | \0 e aspas)
+  // Mantém letras (com acentos), números, espaços, hífens e underscores
+  let nomeLimpo = nomeBruto
+    .replace(/[\0-\x1F\x7F-\x9F]/g, "")
+    .replace(/[\\/:*?"<>|'"]/g, "")
+    .replace(/[^\p{L}\p{N}\s_-]/gu, "");
+
+  // 2. Substitui sequências de espaços/underscores por um único underscore
+  nomeLimpo = nomeLimpo.trim().replace(/[\s_]+/g, "_");
+
+  // Fallback se o nome ficar vazio após sanitização
+  if (!nomeLimpo) {
+    nomeLimpo = "Solicitante";
+  }
+
+  // Obtenção e formatação da data em fuso horário de Brasília (America/Sao_Paulo)
+  let dataObj;
+  if (dados.criadoEm) {
+    dataObj = new Date(dados.criadoEm);
+    if (isNaN(dataObj.getTime())) {
+      dataObj = new Date();
+    }
+  } else {
+    dataObj = new Date();
+  }
+
+  const dataPtBr = dataObj.toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  const dataFormatada = dataPtBr.replace(/\//g, "_");
+
+  return `Ressarcimento_${nomeLimpo}_${dataFormatada}.pdf`;
+}
+
 module.exports = {
   normalizarCpf,
   normalizarCep,
@@ -134,5 +180,6 @@ module.exports = {
   formatarAgencia,
   formatarConta,
   escapeHtml,
+  gerarNomeArquivoRessarcimento,
   // normalizarDataEntrada e normalizarDataBanco removidas.
 };
