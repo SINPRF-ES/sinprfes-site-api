@@ -115,6 +115,7 @@ Seu pedido de ressarcimento de despesas sindicais foi registrado na plataforma d
 Resumo do pedido:
 - Período da atividade: ${formatarDataBR(dados.data_inicio)} a ${formatarDataBR(dados.data_fim)}
 - Local / destino: ${dados.local || "-"}
+- Descrição da atividade: ${dados.descricao || "-"}
 - Valor total solicitado: R$ ${(dados.valor_total || 0).toFixed ? dados.valor_total.toFixed(2) : Number(dados.valor_total || 0).toFixed(2)}
 
 Este e-mail foi gerado automaticamente. Em anexo, segue o PDF consolidado com os dados do pedido, para sua conferência.
