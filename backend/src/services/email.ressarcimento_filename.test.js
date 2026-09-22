@@ -79,7 +79,8 @@ describe("Ressarcimento PDF Filename Naming and Email Dispatch", () => {
         criadoEm: "2026-09-07T12:00:00.000Z",
         data_inicio: "2026-09-01",
         data_fim: "2026-09-05",
-        local: "Vitória",
+        local: "Vitória - ES",
+        descricao: "Evento de apresentação das propostas do SINPRF-ES com a participação dos candidatos Maguinha, Bonadiman e Dárcio.",
         valor_total: 150.0,
       };
 
@@ -96,12 +97,37 @@ describe("Ressarcimento PDF Filename Naming and Email Dispatch", () => {
       expect(sindicatoPayload.attachments).toHaveLength(1);
       expect(sindicatoPayload.attachments[0].filename).toBe(expectedFilename);
       expect(sindicatoPayload.attachments[0].content).toBe(dummyPdfBuffer.toString("base64"));
+      expect(sindicatoPayload.text).toContain("- Local / destino: Vitória - ES");
+      expect(sindicatoPayload.text).toContain("- Descrição da atividade: Evento de apresentação das propostas do SINPRF-ES com a participação dos candidatos Maguinha, Bonadiman e Dárcio.");
+      expect(sindicatoPayload.text).toContain("- Valor total solicitado: R$ 150.00");
 
       // Second call (Solicitante copy)
       const solicitantePayload = sendMock.mock.calls[1][0];
       expect(solicitantePayload.attachments).toHaveLength(1);
       expect(solicitantePayload.attachments[0].filename).toBe(expectedFilename);
       expect(solicitantePayload.attachments[0].content).toBe(dummyPdfBuffer.toString("base64"));
+      expect(solicitantePayload.text).toContain("- Descrição da atividade: Evento de apresentação das propostas do SINPRF-ES com a participação dos candidatos Maguinha, Bonadiman e Dárcio.");
+    });
+
+    test("7. Uses fallback '-' when descricao is missing or empty", async () => {
+      const sendMock = jest.fn().mockResolvedValue({ data: { id: "msg_124" }, error: null });
+      Resend.prototype.emails = { send: sendMock };
+
+      const dados = {
+        nome: "João Silva",
+        cpf: "12345678901",
+        email_destino: "joao@example.com",
+        criadoEm: "2026-09-07T12:00:00.000Z",
+        data_inicio: "2026-09-01",
+        data_fim: "2026-09-05",
+        local: "Vitória - ES",
+        valor_total: 150.0,
+      };
+
+      await enviarEmailRessarcimento(dados, Buffer.from("PDF_DUMMY"));
+
+      const payload = sendMock.mock.calls[0][0];
+      expect(payload.text).toContain("- Descrição da atividade: -");
     });
   });
 
